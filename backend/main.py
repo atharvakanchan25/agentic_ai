@@ -8,6 +8,7 @@ sys.path.append('..')
 from database.database import get_db, init_db
 from database.models import Department, Subject, Room, Faculty, Division, TimeSlot
 from agents.orchestrator import AgentOrchestrator
+from agents.chatbot_agent import ChatbotAgent
 from pydantic import BaseModel
 
 app = FastAPI(
@@ -25,6 +26,8 @@ app.add_middleware(
 )
 
 init_db()
+
+chatbot = ChatbotAgent()
 
 class DepartmentCreate(BaseModel):
     name: str
@@ -58,6 +61,10 @@ class DivisionCreate(BaseModel):
 
 class TimetableRequest(BaseModel):
     department_ids: List[int]
+
+class ChatMessage(BaseModel):
+    message: str
+    context: dict = {}
 
 @app.post("/departments/")
 def create_department(dept: DepartmentCreate, db: Session = Depends(get_db)):
@@ -148,6 +155,38 @@ def generate_timetable(request: TimetableRequest, db: Session = Depends(get_db))
     result = orchestrator.generate_timetable(input_data)
     
     return result
+
+@app.post("/chat/")
+def chat(message: ChatMessage, db: Session = Depends(get_db)):
+    """Natural language chatbot interface"""
+    response = chatbot.process_message(message.message)
+    
+    if response['action'] == 'generate_timetable':
+        departments = db.query(Department).all()
+        if departments:
+            dept_ids = [d.id for d in departments]
+            result = generate_timetable(TimetableRequest(department_ids=dept_ids), db)
+            response['timetable_result'] = result
+    
+    elif response['action'] == 'request_view_type':
+        view_type = message.message.lower()
+        if 'department' in view_type:
+            response['data'] = [{'id': d.id, 'name': d.name, 'code': d.code} for d in db.query(Department).all()]
+        elif 'subject' in view_type:
+            response['data'] = [{'id': s.id, 'name': s.name, 'code': s.code} for s in db.query(Subject).all()]
+        elif 'room' in view_type:
+            response['data'] = [{'id': r.id, 'room_number': r.room_number, 'capacity': r.capacity} for r in db.query(Room).all()]
+        elif 'faculty' in view_type:
+            response['data'] = [{'id': f.id, 'name': f.name, 'employee_id': f.employee_id} for f in db.query(Faculty).all()]
+        elif 'division' in view_type:
+            response['data'] = [{'id': d.id, 'name': d.name, 'year': d.year} for d in db.query(Division).all()]
+    
+    return response
+
+@app.get("/chat/suggestions/")
+def get_suggestions(partial: str = ""):
+    """Get autocomplete suggestions"""
+    return {"suggestions": chatbot.get_suggestions(partial)}
 
 @app.get("/")
 def root():
