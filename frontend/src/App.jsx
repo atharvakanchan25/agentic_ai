@@ -3,6 +3,7 @@ import './App.css'
 import DataInput from './components/DataInput'
 import ReviewData from './components/ReviewData'
 import TimetableView from './components/TimetableView'
+import Chatbot from './components/Chatbot'
 
 function App() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -15,6 +16,7 @@ function App() {
   })
   const [timetable, setTimetable] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [showChatbot, setShowChatbot] = useState(false)
 
   const handleDataComplete = (data) => {
     setFormData(data)
@@ -104,6 +106,16 @@ function App() {
           />
         )}
       </main>
+
+      <button 
+        className="chatbot-toggle"
+        onClick={() => setShowChatbot(!showChatbot)}
+        title="Open AI Assistant"
+      >
+        {showChatbot ? '×' : '💬'}
+      </button>
+
+      {showChatbot && <Chatbot onClose={() => setShowChatbot(false)} />}
 
       <footer>
         <p>Powered by Multi-Agent AI System | MCP Protocol | Constraint Programming</p>
