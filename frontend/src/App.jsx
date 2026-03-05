@@ -4,6 +4,8 @@ import DataInput from './components/DataInput'
 import ReviewData from './components/ReviewData'
 import TimetableView from './components/TimetableView'
 import Chatbot from './components/Chatbot'
+import DarkModeToggle from './components/DarkModeToggle'
+import Toast from './components/Toast'
 
 function App() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -59,6 +61,8 @@ function App() {
 
   return (
     <div className="App">
+      <Toast />
+      <DarkModeToggle />
       <header>
         <h1>University Timetable Management System</h1>
         <p>Automated Scheduling with AI-Powered Agents</p>

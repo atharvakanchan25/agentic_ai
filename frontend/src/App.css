@@ -5,9 +5,10 @@
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .App {
@@ -24,9 +25,10 @@ header {
 }
 
 header h1 {
-  font-size: 2.5rem;
+  font-size: 2.8rem;
   margin-bottom: 10px;
-  font-weight: 700;
+  font-weight: 800;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
 }
 
 header p {
@@ -47,10 +49,11 @@ footer {
   justify-content: center;
   align-items: center;
   margin-bottom: 40px;
-  background: white;
-  padding: 30px;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  background: rgba(255,255,255,0.95);
+  padding: 35px;
+  border-radius: 20px;
+  box-shadow: 0 15px 50px rgba(0,0,0,0.15);
+  backdrop-filter: blur(10px);
 }
 
 .step {
@@ -61,22 +64,25 @@ footer {
 }
 
 .step-number {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  background: #e0e0e0;
+  background: #e8eaf6;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 1.2rem;
+  font-weight: 800;
+  font-size: 1.3rem;
   color: #666;
-  transition: all 0.3s;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 .step.active .step-number {
-  background: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
 }
 
 .step.completed .step-number {
@@ -98,12 +104,13 @@ footer {
 }
 
 main {
-  background: white;
-  border-radius: 15px;
-  padding: 40px;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+  background: rgba(255,255,255,0.98);
+  border-radius: 24px;
+  padding: 50px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
   animation: slideUp 0.6s ease-out;
   min-height: 500px;
+  backdrop-filter: blur(10px);
 }
 
 .data-input-container,
@@ -142,21 +149,23 @@ main {
 }
 
 .tabs button {
-  padding: 15px 25px;
+  padding: 16px 28px;
   background: transparent;
   border: none;
   border-bottom: 3px solid transparent;
   cursor: pointer;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #666;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
+  position: relative;
 }
 
 .tabs button:hover {
   color: #667eea;
-  background: #f8f9ff;
+  background: linear-gradient(to bottom, transparent, #f8f9ff);
+  transform: translateY(-2px);
 }
 
 .tabs button.active {
@@ -205,16 +214,18 @@ main {
 }
 
 .item-card {
-  background: #f8f9fa;
-  border-radius: 10px;
-  padding: 20px;
-  border-left: 4px solid #667eea;
-  transition: transform 0.2s, box-shadow 0.2s;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 16px;
+  padding: 24px;
+  border-left: 5px solid #667eea;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .item-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 12px 30px rgba(102, 126, 234, 0.2);
+  border-left-color: #764ba2;
 }
 
 .card-header {
@@ -781,18 +792,32 @@ tr:last-child td {
   50% { opacity: 0.7; }
 }
 
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 20px rgba(102, 126, 234, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+  }
+}
+
 @media (max-width: 768px) {
   header h1 {
     font-size: 1.8rem;
   }
   
   main {
-    padding: 20px;
+    padding: 24px;
+    border-radius: 20px;
   }
   
   .progress-bar {
     flex-direction: column;
     gap: 20px;
+    padding: 25px;
   }
   
   .progress-line {
@@ -805,28 +830,41 @@ tr:last-child td {
   .constraints-grid {
     grid-template-columns: 1fr;
   }
+  
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .chatbot-toggle {
+    width: 60px;
+    height: 60px;
+    bottom: 20px;
+    right: 20px;
+  }
 }
 
 .chatbot-toggle {
   position: fixed;
   bottom: 30px;
   right: 30px;
-  width: 60px;
-  height: 60px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  font-size: 1.8rem;
+  font-size: 2rem;
   cursor: pointer;
-  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-  transition: all 0.3s;
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.5);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 999;
+  animation: pulse-ring 2s infinite;
 }
 
 .chatbot-toggle:hover {
-  transform: scale(1.1);
-  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
+  transform: scale(1.15) rotate(5deg);
+  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.7);
 }
 
 .chatbot-overlay {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { showToast } from './Toast'
 
 function DataInput({ initialData, onComplete }) {
   const [activeTab, setActiveTab] = useState('departments')
@@ -26,6 +27,7 @@ function DataInput({ initialData, onComplete }) {
       ...prev,
       [type]: [...prev[type], newItem]
     }))
+    showToast(`${type.slice(0, -1)} added successfully!`, 'success')
     closeForm()
   }
 
@@ -35,6 +37,7 @@ function DataInput({ initialData, onComplete }) {
         ...prev,
         [type]: prev[type].filter(item => item.id !== id)
       }))
+      showToast('Item deleted', 'info')
     }
   }
 

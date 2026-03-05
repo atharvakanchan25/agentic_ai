@@ -1,0 +1,78 @@
+.dark-mode-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255,255,255,0.3);
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  z-index: 998;
+}
+
+.dark-mode-toggle:hover {
+  transform: scale(1.1) rotate(20deg);
+  background: rgba(255,255,255,0.3);
+}
+
+body.dark-mode {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+body.dark-mode .App {
+  color: #e0e0e0;
+}
+
+body.dark-mode main {
+  background: rgba(30, 30, 46, 0.95);
+  color: #e0e0e0;
+}
+
+body.dark-mode .progress-bar {
+  background: rgba(40, 40, 60, 0.95);
+}
+
+body.dark-mode .step-label {
+  color: #b0b0b0;
+}
+
+body.dark-mode .item-card {
+  background: linear-gradient(135deg, #2a2a3e 0%, #1f1f2e 100%);
+  color: #e0e0e0;
+}
+
+body.dark-mode .modal-content {
+  background: #2a2a3e;
+  color: #e0e0e0;
+}
+
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
+  background: #1f1f2e;
+  color: #e0e0e0;
+  border-color: #444;
+}
+
+body.dark-mode table {
+  background: #2a2a3e;
+}
+
+body.dark-mode th {
+  background: #1f1f2e;
+  color: #e0e0e0;
+}
+
+body.dark-mode td {
+  color: #d0d0d0;
+  border-bottom-color: #444;
+}
+
+body.dark-mode tr:hover {
+  background: #333348;
+}
