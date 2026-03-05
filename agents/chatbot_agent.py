@@ -1,18 +1,4 @@
-import re
-from typing import Dict, List, Any
 
-class ChatbotAgent:
-    """Natural language interface for timetable management"""
-    
-    def __init__(self):
-        self.name = "ChatbotAgent"
-        self.context = {}
-        self.conversation_history = []
-    
-    def process_message(self, user_message: str) -> Dict[str, Any]:
-        """Process user message and extract intent"""
-        user_message = user_message.lower().strip()
-        self.conversation_history.append({"role": "user", "message": user_message})
         
         intent = self._detect_intent(user_message)
         response = self._generate_response(intent, user_message)
