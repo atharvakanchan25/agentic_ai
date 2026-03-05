@@ -18,6 +18,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Create API router
+from fastapi import APIRouter
+api_router = APIRouter(prefix="/api")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -67,67 +71,127 @@ class ChatMessage(BaseModel):
     message: str
     context: dict = {}
 
-@app.post("/departments/")
+@api_router.post("/departments/")
 def create_department(dept: DepartmentCreate, db: Session = Depends(get_db)):
-    db_dept = Department(**dept.dict())
-    db.add(db_dept)
-    db.commit()
-    db.refresh(db_dept)
-    return db_dept
+    try:
+        # Check if department already exists
+        existing = db.query(Department).filter(
+            (Department.name == dept.name) | (Department.code == dept.code)
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Department already exists")
+        
+        db_dept = Department(**dept.dict())
+        db.add(db_dept)
+        db.commit()
+        db.refresh(db_dept)
+        return db_dept
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/departments/")
+@api_router.get("/departments/")
 def get_departments(db: Session = Depends(get_db)):
-    return db.query(Department).all()
+    try:
+        return db.query(Department).all()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/subjects/")
+@api_router.post("/subjects/")
 def create_subject(subject: SubjectCreate, db: Session = Depends(get_db)):
-    db_subject = Subject(**subject.dict())
-    db.add(db_subject)
-    db.commit()
-    db.refresh(db_subject)
-    return db_subject
+    try:
+        existing = db.query(Subject).filter(Subject.code == subject.code).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Subject code already exists")
+        
+        db_subject = Subject(**subject.dict())
+        db.add(db_subject)
+        db.commit()
+        db.refresh(db_subject)
+        return db_subject
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/subjects/")
+@api_router.get("/subjects/")
 def get_subjects(db: Session = Depends(get_db)):
-    return db.query(Subject).all()
+    try:
+        return db.query(Subject).all()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/rooms/")
+@api_router.post("/rooms/")
 def create_room(room: RoomCreate, db: Session = Depends(get_db)):
-    db_room = Room(**room.dict())
-    db.add(db_room)
-    db.commit()
-    db.refresh(db_room)
-    return db_room
+    try:
+        existing = db.query(Room).filter(Room.room_number == room.room_number).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Room number already exists")
+        
+        db_room = Room(**room.dict())
+        db.add(db_room)
+        db.commit()
+        db.refresh(db_room)
+        return db_room
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/rooms/")
+@api_router.get("/rooms/")
 def get_rooms(db: Session = Depends(get_db)):
-    return db.query(Room).all()
+    try:
+        return db.query(Room).all()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/faculty/")
+@api_router.post("/faculty/")
 def create_faculty(faculty: FacultyCreate, db: Session = Depends(get_db)):
-    db_faculty = Faculty(**faculty.dict())
-    db.add(db_faculty)
-    db.commit()
-    db.refresh(db_faculty)
-    return db_faculty
+    try:
+        existing = db.query(Faculty).filter(Faculty.employee_id == faculty.employee_id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Employee ID already exists")
+        
+        db_faculty = Faculty(**faculty.dict())
+        db.add(db_faculty)
+        db.commit()
+        db.refresh(db_faculty)
+        return db_faculty
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/faculty/")
+@api_router.get("/faculty/")
 def get_faculty(db: Session = Depends(get_db)):
-    return db.query(Faculty).all()
+    try:
+        return db.query(Faculty).all()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/divisions/")
+@api_router.post("/divisions/")
 def create_division(division: DivisionCreate, db: Session = Depends(get_db)):
-    db_division = Division(**division.dict())
-    db.add(db_division)
-    db.commit()
-    db.refresh(db_division)
-    return db_division
+    try:
+        existing = db.query(Division).filter(
+            (Division.name == division.name) & (Division.department_id == division.department_id)
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Division already exists in this department")
+        
+        db_division = Division(**division.dict())
+        db.add(db_division)
+        db.commit()
+        db.refresh(db_division)
+        return db_division
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/divisions/")
+@api_router.get("/divisions/")
 def get_divisions(db: Session = Depends(get_db)):
-    return db.query(Division).all()
+    try:
+        return db.query(Division).all()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/generate-timetable/")
+@api_router.post("/generate-timetable/")
 def generate_timetable(request: TimetableRequest, db: Session = Depends(get_db)):
     divisions = db.query(Division).filter(Division.department_id.in_(request.department_ids)).all()
     subjects = db.query(Subject).filter(Subject.department_id.in_(request.department_ids)).all()
@@ -157,7 +221,7 @@ def generate_timetable(request: TimetableRequest, db: Session = Depends(get_db))
     
     return result
 
-@app.post("/chat/")
+@api_router.post("/chat/")
 def chat(message: ChatMessage, db: Session = Depends(get_db)):
     """Natural language chatbot interface"""
     response = chatbot.process_message(message.message)
@@ -184,7 +248,7 @@ def chat(message: ChatMessage, db: Session = Depends(get_db)):
     
     return response
 
-@app.get("/chat/suggestions/")
+@api_router.get("/chat/suggestions/")
 def get_suggestions(partial: str = ""):
     """Get autocomplete suggestions"""
     return {"suggestions": chatbot.get_suggestions(partial)}
@@ -196,6 +260,9 @@ def root():
         "status": "running",
         "version": "1.0.0"
     }
+
+# Include API router
+app.include_router(api_router)
 
 if __name__ == "__main__":
     import uvicorn

@@ -2,258 +2,297 @@
 
 ## Common Issues and Solutions
 
-### 1. Backend Won't Start
+### Backend Issues
 
-#### Issue: "Module not found"
-```bash
-# Solution: Install dependencies
-cd backend
-pip install -r requirements.txt
-```
+#### 1. Port 8000 Already in Use
+**Error:** `OSError: [WinError 10048] Only one usage of each socket address`
 
-#### Issue: "Port 8000 already in use"
+**Solution:**
 ```powershell
 # Find process using port 8000
 netstat -ano | findstr :8000
 
-# Kill the process (replace PID with actual number)
+# Kill the process (replace <PID> with actual process ID)
 taskkill /PID <PID> /F
 
-# Or change port in backend/main.py
-uvicorn.run(app, host="0.0.0.0", port=8001)
+# Or use a different port
+uvicorn main:app --host 0.0.0.0 --port 8001
 ```
 
-#### Issue: "Database error"
+#### 2. Module Import Errors
+**Error:** `ModuleNotFoundError: No module named 'agents'`
+
+**Solution:**
 ```bash
-# Delete and recreate database
+# Ensure you're in the correct directory
 cd backend
-rm timetable.db
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Add parent directory to Python path
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/.."
+```
+
+#### 3. Database Connection Issues
+**Error:** `sqlite3.OperationalError: database is locked`
+
+**Solution:**
+```bash
+# Stop all running processes
+# Delete database file
+rm backend/timetable.db
+
+# Reinitialize database
+cd backend
 python seed_data.py
 ```
 
-### 2. Frontend Won't Start
+#### 4. OR-Tools Installation Issues
+**Error:** `ImportError: No module named 'ortools'`
 
-#### Issue: "npm not found"
-```
-Download and install Node.js from:
-https://nodejs.org/
+**Solution:**
+```bash
+# Install OR-Tools
+pip install ortools
+
+# If that fails, try:
+pip install --upgrade pip
+pip install ortools --no-cache-dir
+
+# For Windows with Python 3.11+:
+pip install ortools==9.7.2996
 ```
 
-#### Issue: "Port 5173 already in use"
+### Frontend Issues
+
+#### 1. Port 5173 Already in Use
+**Error:** `Port 5173 is already in use`
+
+**Solution:**
 ```powershell
 # Find and kill process
 netstat -ano | findstr :5173
 taskkill /PID <PID> /F
+
+# Or use different port
+npm run dev -- --port 5174
 ```
 
-#### Issue: "Module not found" or "Dependencies error"
+#### 2. Node Dependencies Issues
+**Error:** `Module not found` or `Cannot resolve dependency`
+
+**Solution:**
 ```bash
-cd frontend
-rm -r node_modules
-rm package-lock.json
+# Clear node modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+
+# If still failing, clear npm cache
+npm cache clean --force
 npm install
 ```
 
-### 3. Application Issues
+#### 3. API Connection Issues
+**Error:** `Network Error` or `Failed to fetch`
 
-#### Issue: "Blank page in browser"
-1. Check browser console (F12)
-2. Verify backend is running on port 8000
-3. Check network tab for API errors
-4. Clear browser cache
+**Solution:**
+1. Ensure backend is running on port 8000
+2. Check proxy configuration in `vite.config.js`
+3. Verify CORS settings in backend
+4. Check browser console for detailed errors
 
-#### Issue: "CORS error"
-1. Ensure backend is running
-2. Check CORS settings in backend/main.py
-3. Verify frontend is accessing correct API URL
+#### 4. Build Issues
+**Error:** `Build failed` or `Vite build errors`
 
-#### Issue: "Cannot generate timetable"
-1. Ensure all data categories have entries
-2. Check timeslots are seeded
-3. Review constraint violations in output
-4. Check backend logs for errors
-
-### 4. Database Issues
-
-#### Issue: "Database is locked"
+**Solution:**
 ```bash
-# Close all terminals
-# Delete database
-rm backend/timetable.db
-# Reinitialize
-python backend/seed_data.py
+# Clear Vite cache
+rm -rf .vite
+npm run build
+
+# If TypeScript errors:
+npm install --save-dev @types/react @types/react-dom
 ```
 
-#### Issue: "No timeslots found"
+### Agent System Issues
+
+#### 1. Constraint Solver Timeout
+**Error:** `Solver timeout reached`
+
+**Solution:**
+- Reduce problem size (fewer divisions/subjects)
+- Increase timeout in `config/config.py`
+- Simplify constraints
+- Add more rooms/faculty to reduce conflicts
+
+#### 2. Infeasible Timetable
+**Error:** `No feasible solution found`
+
+**Solution:**
+1. Check data consistency:
+   - Enough rooms for all classes
+   - Sufficient faculty members
+   - Room capacities match student counts
+   - Lab subjects have lab rooms available
+
+2. Reduce constraints:
+   - Increase working hours
+   - Add more timeslots
+   - Reduce hours per week for subjects
+
+#### 3. Agent Communication Errors
+**Error:** `MCP connection failed`
+
+**Solution:**
 ```bash
+# Start MCP server separately
+cd mcp_server
+python server.py
+
+# Check if WebSocket port is available
+netstat -ano | findstr :8765
+```
+
+### Database Issues
+
+#### 1. Migration Errors
+**Error:** `Table already exists` or `Column doesn't exist`
+
+**Solution:**
+```bash
+# Drop and recreate database
+rm backend/timetable.db
 cd backend
 python seed_data.py
 ```
 
-### 5. Chatbot Issues
+#### 2. Foreign Key Constraints
+**Error:** `FOREIGN KEY constraint failed`
 
-#### Issue: "Chatbot not responding"
-1. Check backend is running
-2. Verify /chat/ endpoint in API docs
-3. Check browser console for errors
-4. Ensure chatbot_agent.py exists
+**Solution:**
+- Ensure referenced records exist before creating dependent records
+- Check department_id exists before creating subjects
+- Verify data integrity in seed_data.py
 
-#### Issue: "Suggestions not working"
-1. Check /chat/suggestions/ endpoint
-2. Verify backend logs
-3. Test endpoint in API docs
+### Performance Issues
 
-### 6. Installation Issues
+#### 1. Slow Timetable Generation
+**Symptoms:** Generation takes more than 30 seconds
 
-#### Issue: "pip install fails"
+**Solutions:**
+- Reduce solver timeout
+- Optimize constraints in OptimizationAgent
+- Use fewer decision variables
+- Implement heuristic pre-processing
+
+#### 2. High Memory Usage
+**Symptoms:** System becomes unresponsive
+
+**Solutions:**
+- Limit problem size
+- Use more efficient data structures
+- Implement garbage collection
+- Monitor memory usage during optimization
+
+### Development Issues
+
+#### 1. Hot Reload Not Working
+**Problem:** Changes not reflected in browser
+
+**Solution:**
 ```bash
-# Upgrade pip
-python -m pip install --upgrade pip
+# Restart development server
+npm run dev
 
-# Install packages one by one
-pip install fastapi
-pip install uvicorn
-pip install sqlalchemy
-pip install ortools
+# Clear browser cache
+# Check file watchers limit (Linux/Mac)
+echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
 ```
 
-#### Issue: "npm install fails"
-```bash
-# Clear npm cache
-npm cache clean --force
+#### 2. CORS Errors
+**Error:** `Access-Control-Allow-Origin`
 
-# Try with legacy peer deps
-npm install --legacy-peer-deps
+**Solution:**
+```python
+# In backend/main.py, ensure CORS is properly configured
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 ```
 
-### 7. Performance Issues
+### Testing Issues
 
-#### Issue: "Slow timetable generation"
-1. Reduce solver timeout in config/config.py
-2. Limit number of divisions/subjects
-3. Check system resources
+#### 1. Test Failures
+**Error:** Tests fail with import errors
 
-#### Issue: "Frontend slow to load"
-1. Clear browser cache
-2. Check network tab for large files
-3. Run production build: npm run build
-
-### 8. Git Issues
-
-#### Issue: "Merge conflicts"
+**Solution:**
 ```bash
-# Stash your changes
-git stash
-
-# Pull latest
-git pull origin main
-
-# Apply your changes
-git stash pop
-```
-
-#### Issue: "Cannot push to GitHub"
-```bash
-# Check remote
-git remote -v
-
-# Set remote if needed
-git remote add origin <your-repo-url>
-
-# Force push (use carefully)
-git push -f origin main
-```
-
-### 9. Environment Issues
-
-#### Issue: "Python version mismatch"
-```bash
-# Check Python version
-python --version
-
-# Use specific Python version
-python3.10 -m venv venv
-```
-
-#### Issue: "Node version mismatch"
-```bash
-# Check Node version
-node --version
-
-# Use nvm to switch versions (if installed)
-nvm use 18
-```
-
-### 10. Testing Issues
-
-#### Issue: "Tests fail"
-```bash
+# Run tests from correct directory
 cd agents
 python test_agents.py
 
-# If errors, check:
-# 1. All dependencies installed
-# 2. Database initialized
-# 3. Correct Python path
+# Ensure all dependencies are installed
+pip install -r ../backend/requirements.txt
 ```
+
+#### 2. Agent Tests Timeout
+**Problem:** Tests hang or timeout
+
+**Solution:**
+- Reduce test data size
+- Mock external dependencies
+- Set shorter timeouts for tests
+- Check for infinite loops in agent logic
 
 ## Getting Help
 
-If issues persist:
+### Log Files
+Check these locations for detailed error information:
+- Backend: Console output where `python main.py` is running
+- Frontend: Browser developer console (F12)
+- Agent logs: Check orchestrator message_log
 
-1. Check API documentation: http://localhost:8000/docs
-2. Review backend logs in terminal
-3. Check browser console (F12)
-4. Verify all prerequisites are installed
-5. Try clean reinstall:
-   ```bash
-   # Backend
-   cd backend
-   rm -r __pycache__
-   pip install -r requirements.txt
-   
-   # Frontend
-   cd frontend
-   rm -r node_modules
-   npm install
-   ```
+### Debug Mode
+Enable debug mode for more detailed logging:
 
-## Logs Location
+**Backend:**
+```python
+# In main.py
+import logging
+logging.basicConfig(level=logging.DEBUG)
+```
 
-- Backend logs: Terminal where `python main.py` is running
-- Frontend logs: Browser console (F12)
-- Database: `backend/timetable.db`
+**Frontend:**
+```javascript
+// Add to App.jsx
+console.log('Debug info:', data);
+```
 
-## Reset Everything
-
-If all else fails, complete reset:
+### Common Commands Summary
 
 ```bash
-# Delete database
-rm backend/timetable.db
+# Full restart
+cd backend && python main.py &
+cd frontend && npm run dev &
 
-# Delete Python cache
-rm -r backend/__pycache__
-rm -r agents/__pycache__
-rm -r database/__pycache__
+# Reset database
+rm backend/timetable.db && cd backend && python seed_data.py
 
-# Delete frontend build
-rm -r frontend/node_modules
-rm -r frontend/dist
+# Test agents
+cd agents && python test_agents.py
 
-# Reinstall
-cd backend
-pip install -r requirements.txt
-python seed_data.py
-
-cd ../frontend
-npm install
-
-# Restart servers
-cd ../backend
-python main.py
-
-# New terminal
-cd frontend
-npm run dev
+# Check ports
+netstat -ano | findstr :8000
+netstat -ano | findstr :5173
 ```
+
+### Contact Information
+For additional support:
+- Check project documentation
+- Review GitHub issues
+- Contact development team
