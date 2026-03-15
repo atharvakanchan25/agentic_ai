@@ -60,6 +60,23 @@ export default function TimetablePage() {
     ? [...new Set(result.timetable.map(e => e.division_name))]
     : []
 
+  /* ── Export CSV ── */
+  const exportCSV = () => {
+    if (!result?.timetable?.length) return
+    const headers = ['Division','Subject','Code','Room','Day','Slot','Start','End','Lab']
+    const rows = result.timetable.map(e => [
+      e.division_name, e.subject_name, e.subject_code,
+      e.room_number, e.day, e.slot_number,
+      e.start_time, e.end_time, e.is_lab ? 'Yes' : 'No'
+    ])
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url; a.download = 'timetable.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const metricValues = result ? {
     total_assignments: result.total_assignments,
     conflicts_found:   result.conflicts_found,
@@ -127,6 +144,16 @@ export default function TimetablePage() {
                     <div className="metric-label">{m.label}</div>
                   </div>
                 ))}
+              </div>
+
+              {/* Export bar */}
+              <div className="export-bar">
+                <button className="btn-export" onClick={exportCSV} data-tooltip="Download as CSV">
+                  📥 Export CSV
+                </button>
+                <button className="btn-export" onClick={() => window.print()} data-tooltip="Print timetable">
+                  🖨️ Print
+                </button>
               </div>
 
               {/* Tabs */}
