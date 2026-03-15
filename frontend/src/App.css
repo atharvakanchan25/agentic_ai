@@ -1,0 +1,44 @@
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+
+.header {
+  background: #1a1a2e;
+  color: #fff;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon { font-size: 22px; }
+.logo-text { font-size: 18px; font-weight: 700; color: #fff; }
+.logo-sub { font-size: 12px; color: #94a3b8; }
+
+.nav { display: flex; gap: 4px; }
+.nav-btn {
+  background: transparent;
+  color: #94a3b8;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.nav-btn:hover { background: rgba(255,255,255,0.08); color: #fff; opacity: 1; }
+.nav-btn.active { background: #4f46e5; color: #fff; }
+
+.main {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+}

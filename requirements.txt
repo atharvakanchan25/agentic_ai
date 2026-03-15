@@ -1,0 +1,21 @@
+# Core Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.9.0
+
+# Database (2.0.36+ supports Python 3.13)
+sqlalchemy>=2.0.36
+
+# Optimization
+ortools>=9.11.4210
+
+# HTTP & Files
+httpx>=0.27.0
+aiofiles>=24.1.0
+
+# Utilities
+python-multipart>=0.0.12
+python-dotenv>=1.0.1
+
+# WebSockets (for MCP)
+websockets>=13.0
