@@ -71,12 +71,55 @@
 .btn-danger-sm {
   background: var(--danger-light);
   color: var(--danger);
-  padding: 5px 10px;
+  padding: 5px 8px;
   font-size: 12px;
   font-weight: 500;
   border-radius: var(--radius-sm);
 }
 .btn-danger-sm:hover:not(:disabled) { background: #fecaca; opacity: 1; }
+
+.btn-edit-sm {
+  background: var(--warning-light);
+  color: var(--warning);
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+}
+.btn-edit-sm:hover:not(:disabled) { background: #fde68a; opacity: 1; }
+
+.btn-save-sm {
+  background: var(--success-light);
+  color: var(--success);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+}
+.btn-save-sm:hover:not(:disabled) { background: #bbf7d0; opacity: 1; }
+
+.btn-cancel-sm {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  padding: 5px 8px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+}
+.btn-cancel-sm:hover:not(:disabled) { background: var(--border); opacity: 1; }
+
+.btn-reset {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  padding: 10px 14px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  align-self: end;
+}
+.btn-reset:hover:not(:disabled) { background: var(--border); opacity: 1; }
+
+.action-btns { display: flex; gap: 4px; align-items: center; }
+
+.form-actions { display: flex; gap: 8px; align-items: end; }
 
 /* ── Spinner ──────────────────────────────────────────────────────────────── */
 .spinner {

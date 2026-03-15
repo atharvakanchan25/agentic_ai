@@ -188,6 +188,35 @@ tr:hover td { background: var(--bg-subtle); }
 }
 .empty-state-icon { font-size: 36px; opacity: 0.5; }
 
+/* ── Dark mode tokens ───────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --primary:        #818cf8;
+  --primary-dark:   #6366f1;
+  --primary-light:  #1e1b4b;
+  --success:        #4ade80;
+  --success-light:  #052e16;
+  --danger:         #f87171;
+  --danger-light:   #450a0a;
+  --warning:        #fbbf24;
+  --warning-light:  #451a03;
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --border:         #334155;
+  --bg:             #0f172a;
+  --bg-subtle:      #1e293b;
+  --white:          #1e293b;
+  --shadow-sm:      0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:      0 4px 12px rgba(0,0,0,0.5);
+}
+
+[data-theme="dark"] .header { background: #0f172a; }
+[data-theme="dark"] .tt-grid th { background: #0f172a; }
+[data-theme="dark"] .auth-brand { background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%); }
+[data-theme="dark"] input, [data-theme="dark"] select { background: #0f172a; color: var(--text-primary); }
+
+body { transition: background var(--transition), color var(--transition); }
+
 /* ── Spinner (shared) ───────────────────────────────────────────────────────────── */
 .spinner {
   display: inline-block;

@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
+import { useToast } from './Toast'
 
 export default function EntityTable({
-  title, columns, fetchFn, createFn, deleteFn,
+  title, columns, fetchFn, createFn, deleteFn, updateFn,
   fields, extraData = {}, emptyIcon = '📭'
 }) {
-  const [rows, setRows]       = useState([])
-  const [form, setForm]       = useState({})
-  const [loading, setLoading] = useState(false)
+  const toast = useToast()
+
+  const [rows, setRows]         = useState([])
+  const [form, setForm]         = useState({})
+  const [loading, setLoading]   = useState(false)
   const [fetching, setFetching] = useState(true)
-  const [error, setError]     = useState('')
-  const [success, setSuccess] = useState('')
+  const [editId, setEditId]     = useState(null)
+  const [editForm, setEditForm] = useState({})
 
   const load = async () => {
     setFetching(true)
@@ -17,7 +20,7 @@ export default function EntityTable({
       const res = await fetchFn()
       setRows(res.data)
     } catch {
-      setError('Failed to load data. Please refresh.')
+      toast('Failed to load data. Please refresh.', 'error')
     } finally {
       setFetching(false)
     }
@@ -25,40 +28,85 @@ export default function EntityTable({
 
   useEffect(() => { load() }, [])
 
-  // Auto-clear feedback after 3s
-  useEffect(() => {
-    if (!success && !error) return
-    const t = setTimeout(() => { setSuccess(''); setError('') }, 3500)
-    return () => clearTimeout(t)
-  }, [success, error])
-
+  /* ── Add ── */
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError(''); setSuccess('')
     setLoading(true)
     try {
       await createFn(form)
-      setSuccess(`${title} added successfully ✓`)
+      toast(`${title} added successfully`, 'success')
       setForm({})
       load()
     } catch (err) {
-      setError(err.response?.data?.detail || `Failed to add ${title.toLowerCase()}`)
+      toast(err.response?.data?.detail || `Failed to add ${title.toLowerCase()}`, 'error')
     } finally {
       setLoading(false)
     }
   }
 
+  /* ── Delete ── */
   const handleDelete = async (id, label) => {
     if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return
     try {
       await deleteFn(id)
+      toast(`${title} deleted`, 'warning')
       load()
     } catch {
-      setError('Failed to delete. It may be referenced by other records.')
+      toast('Failed to delete. It may be referenced by other records.', 'error')
     }
   }
 
-  const setField = (name, value) => setForm(f => ({ ...f, [name]: value }))
+  /* ── Edit ── */
+  const startEdit = (row) => {
+    setEditId(row.id)
+    setEditForm({ ...row })
+  }
+
+  const cancelEdit = () => { setEditId(null); setEditForm({}) }
+
+  const handleUpdate = async (id) => {
+    if (!updateFn) return
+    try {
+      await updateFn(id, editForm)
+      toast(`${title} updated`, 'success')
+      setEditId(null)
+      load()
+    } catch (err) {
+      toast(err.response?.data?.detail || `Failed to update ${title.toLowerCase()}`, 'error')
+    }
+  }
+
+  const setField     = (name, value) => setForm(f => ({ ...f, [name]: value }))
+  const setEditField = (name, value) => setEditForm(f => ({ ...f, [name]: value }))
+
+  const renderInput = (f, value, onChange) => {
+    if (f.type === 'select') return (
+      <select value={value ?? ''} onChange={e => onChange(f.name, f.valueType === 'int' ? parseInt(e.target.value) : e.target.value)} required={f.required}>
+        <option value="">— Select {f.label} —</option>
+        {(extraData[f.optionsKey] || []).map(opt => (
+          <option key={opt.id} value={opt.id}>{opt.name || opt.code}</option>
+        ))}
+      </select>
+    )
+    if (f.type === 'checkbox') return (
+      <label className="checkbox-label">
+        <input type="checkbox" checked={!!value} onChange={e => onChange(f.name, e.target.checked)} />
+        <span>{f.checkLabel || f.label}</span>
+      </label>
+    )
+    return (
+      <input
+        type={f.type || 'text'}
+        placeholder={f.placeholder || `Enter ${f.label.toLowerCase()}`}
+        value={value ?? ''}
+        onChange={e => onChange(f.name, f.valueType === 'int' ? (parseInt(e.target.value) || '') : e.target.value)}
+        required={f.required}
+        min={f.min}
+        max={f.max}
+        autoComplete="off"
+      />
+    )
+  }
 
   return (
     <div className="entity-section fade-in">
@@ -73,52 +121,21 @@ export default function EntityTable({
       <form className="entity-form" onSubmit={handleSubmit} noValidate>
         {fields.map(f => (
           <div key={f.name} className="form-field">
-            <label htmlFor={`field-${f.name}`}>{f.label}{f.required && <span className="required-star">*</span>}</label>
-
-            {f.type === 'select' ? (
-              <select
-                id={`field-${f.name}`}
-                value={form[f.name] ?? ''}
-                onChange={e => setField(f.name, f.valueType === 'int' ? parseInt(e.target.value) : e.target.value)}
-                required={f.required}
-              >
-                <option value="">— Select {f.label} —</option>
-                {(extraData[f.optionsKey] || []).map(opt => (
-                  <option key={opt.id} value={opt.id}>{opt.name || opt.code}</option>
-                ))}
-              </select>
-            ) : f.type === 'checkbox' ? (
-              <label className="checkbox-label" htmlFor={`field-${f.name}`}>
-                <input
-                  id={`field-${f.name}`}
-                  type="checkbox"
-                  checked={!!form[f.name]}
-                  onChange={e => setField(f.name, e.target.checked)}
-                />
-                <span>{f.checkLabel || f.label}</span>
-              </label>
-            ) : (
-              <input
-                id={`field-${f.name}`}
-                type={f.type || 'text'}
-                placeholder={f.placeholder || `Enter ${f.label.toLowerCase()}`}
-                value={form[f.name] ?? ''}
-                onChange={e => setField(f.name, f.valueType === 'int' ? (parseInt(e.target.value) || '') : e.target.value)}
-                required={f.required}
-                min={f.min}
-                max={f.max}
-                autoComplete="off"
-              />
-            )}
+            <label htmlFor={`field-${f.name}`}>
+              {f.label}{f.required && <span className="required-star">*</span>}
+            </label>
+            {renderInput(f, form[f.name], setField)}
           </div>
         ))}
-        <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? <><span className="spinner" />Adding…</> : `＋ Add ${title}`}
-        </button>
+        <div className="form-actions">
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? <><span className="spinner" />Adding…</> : `＋ Add ${title}`}
+          </button>
+          <button type="button" className="btn-reset" onClick={() => setForm({})} disabled={loading}>
+            ✕ Clear
+          </button>
+        </div>
       </form>
-
-      {error   && <p className="error-msg">⚠ {error}</p>}
-      {success && <p className="success-msg">✓ {success}</p>}
 
       {/* ── Table ── */}
       {fetching ? (
@@ -137,20 +154,49 @@ export default function EntityTable({
             <tbody>
               {rows.map(row => (
                 <tr key={row.id}>
-                  {columns.map(c => (
-                    <td key={c.key}>
-                      {c.render ? c.render(row[c.key], row) : String(row[c.key] ?? '—')}
-                    </td>
-                  ))}
-                  <td>
-                    <button
-                      className="btn-danger-sm"
-                      onClick={() => handleDelete(row.id, row.name || row.room_number || row.employee_id || row.id)}
-                      data-tooltip="Delete this record"
-                    >
-                      🗑 Delete
-                    </button>
-                  </td>
+                  {editId === row.id ? (
+                    <>
+                      {columns.map(c => {
+                        const f = fields.find(f => f.name === c.key)
+                        return (
+                          <td key={c.key}>
+                            {f ? renderInput(f, editForm[c.key], setEditField)
+                               : <span>{String(row[c.key] ?? '—')}</span>}
+                          </td>
+                        )
+                      })}
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn-save-sm" onClick={() => handleUpdate(row.id)}>✓ Save</button>
+                          <button className="btn-cancel-sm" onClick={cancelEdit}>✕</button>
+                        </div>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      {columns.map(c => (
+                        <td key={c.key}>
+                          {c.render ? c.render(row[c.key], row) : String(row[c.key] ?? '—')}
+                        </td>
+                      ))}
+                      <td>
+                        <div className="action-btns">
+                          {updateFn && (
+                            <button className="btn-edit-sm" onClick={() => startEdit(row)} data-tooltip="Edit this record">
+                              ✏️ Edit
+                            </button>
+                          )}
+                          <button
+                            className="btn-danger-sm"
+                            onClick={() => handleDelete(row.id, row.name || row.room_number || row.employee_id || row.id)}
+                            data-tooltip="Delete this record"
+                          >
+                            🗑
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
