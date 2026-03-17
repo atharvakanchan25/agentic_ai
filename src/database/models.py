@@ -1,7 +1,7 @@
 """
 Database Models
 """
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Text
 from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime
 
@@ -85,3 +85,27 @@ class TimetableEntry(Base):
     faculty_id = Column(Integer, ForeignKey("faculty.id"), nullable=True)
     timeslot_id = Column(Integer, ForeignKey("timeslots.id"), nullable=False)
     generated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AgentMemory(Base):
+    """Long-term memory store for all agents."""
+    __tablename__ = "agent_memory"
+    id = Column(Integer, primary_key=True, index=True)
+    agent_name = Column(String, nullable=False, index=True)
+    key = Column(String, nullable=False, index=True)
+    value = Column(Text, nullable=False)          # JSON-encoded
+    run_id = Column(String, nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class PipelineRun(Base):
+    """Tracks each timetable generation run for HITL checkpoints."""
+    __tablename__ = "pipeline_runs"
+    id = Column(String, primary_key=True)          # UUID
+    status = Column(String, default="running")     # running | awaiting_approval | approved | rejected | completed | failed
+    stage = Column(String, nullable=True)          # current/last stage
+    input_data = Column(Text, nullable=True)       # JSON
+    checkpoint_data = Column(Text, nullable=True)  # JSON — data at HITL pause
+    result = Column(Text, nullable=True)           # JSON — final result
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

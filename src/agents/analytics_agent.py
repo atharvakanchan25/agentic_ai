@@ -4,6 +4,8 @@ Analytics Agent - Generates insights, metrics, and reports from timetable data
 from typing import Dict, Any, List
 from collections import defaultdict
 from .base_agent import BaseAgent
+from .state_machine import AgentState
+from .tools import score_timetable
 
 
 class AnalyticsAgent(BaseAgent):
@@ -17,7 +19,8 @@ class AnalyticsAgent(BaseAgent):
         ])
 
     async def _initialize_agent(self):
-        self.log_action("AnalyticsAgent initialized")
+        self.register_tool("score_timetable", score_timetable)
+        self.log_action("AnalyticsAgent initialized with self-reflection")
 
     def _register_custom_handlers(self):
         pass
@@ -37,6 +40,8 @@ class AnalyticsAgent(BaseAgent):
             return await self.calculate_metrics(params)
         elif method == "generate_report":
             return await self.generate_report(params)
+        elif method == "self_reflect":
+            return await self.self_reflect(params)
         return {"status": "error", "message": f"Unknown method: {method}"}
 
     async def analyze_timetable(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -163,11 +168,57 @@ class AnalyticsAgent(BaseAgent):
             }
         }
 
+    async def self_reflect(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Critique the timetable and return actionable improvement suggestions.
+        Uses the score_timetable tool then reasons about the issues found.
+        """
+        self._set_state(AgentState.REFLECTING)
+        timetable: List[Dict] = data.get("timetable", [])
+
+        score_result = self.use_tool("score_timetable", timetable=timetable)
+        score = score_result["score"]
+        issues = score_result["issues"]
+        gaps   = score_result["total_gaps"]
+
+        critique: List[str] = []
+        suggestions: List[str] = []
+
+        for issue in issues:
+            if issue["type"] == "consecutive_overload":
+                critique.append(
+                    f"Division {issue['division_id']} has {issue['consecutive_count']} consecutive lectures on {issue['day']}."
+                )
+                suggestions.append(
+                    f"Insert a break for division {issue['division_id']} on {issue['day']} — split lectures across the day."
+                )
+
+        if gaps > 0:
+            critique.append(f"Total of {gaps} free-slot gaps detected across all divisions.")
+            suggestions.append("Compact schedules to reduce gaps — students prefer back-to-back classes.")
+
+        if score >= 80:
+            critique.append("Overall timetable quality is good.")
+        elif score >= 50:
+            critique.append("Timetable quality is acceptable but has room for improvement.")
+        else:
+            critique.append("Timetable quality is poor — consider re-running optimization with tighter constraints.")
+
+        self._set_state(AgentState.COMPLETED)
+        self.log_action(f"Self-reflection complete. Score: {score}")
+        return {
+            "status": "success",
+            "quality_score": score,
+            "critique": critique,
+            "suggestions": suggestions,
+        }
+
     async def generate_report(self, data: Dict[str, Any]) -> Dict[str, Any]:
         timetable = data.get("timetable", [])
-        analytics = (await self.analyze_timetable({"timetable": timetable})).get("analytics", {})
-        insights = (await self.generate_insights({"timetable": timetable})).get("insights", [])
-        metrics = (await self.calculate_metrics({"timetable": timetable})).get("metrics", {})
+        analytics   = (await self.analyze_timetable({"timetable": timetable})).get("analytics", {})
+        insights    = (await self.generate_insights({"timetable": timetable})).get("insights", [])
+        metrics     = (await self.calculate_metrics({"timetable": timetable})).get("metrics", {})
+        reflection  = (await self.self_reflect({"timetable": timetable}))
 
         return {
             "status": "success",
@@ -175,6 +226,9 @@ class AnalyticsAgent(BaseAgent):
                 "summary": analytics,
                 "insights": insights,
                 "performance_metrics": metrics,
+                "quality_score": reflection.get("quality_score"),
+                "critique": reflection.get("critique", []),
+                "improvement_suggestions": reflection.get("suggestions", []),
                 "total_entries": len(timetable)
             }
         }
