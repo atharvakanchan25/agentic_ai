@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
-from src.database.database import get_db
-from src.database.models import Department, Subject, Room, Faculty, Division, TimeSlot
+from src.database.database import get_db, SessionLocal
+from src.database.models import Department, Subject, Room, Faculty, Division, TimeSlot, PipelineRun
 from src.agents.orchestrator import AgentOrchestrator
 from src.api.schemas import (
     DepartmentCreate, DepartmentOut,
@@ -156,9 +156,45 @@ def generate_timetable(request: TimetableRequest, db: Session = Depends(get_db))
         "timeslots":  [{"id": t.id, "day": t.day, "slot_number": t.slot_number, "start_time": t.start_time, "end_time": t.end_time} for t in timeslots],
     }
 
-    orchestrator = AgentOrchestrator()
-    result = orchestrator.generate_timetable(input_data)
+    hitl = request.hitl_enabled if hasattr(request, "hitl_enabled") else False
+    orchestrator = AgentOrchestrator(db_session_factory=SessionLocal)
+    result = orchestrator.generate_timetable(input_data, hitl_enabled=hitl)
     return result
+
+# ── HITL Approval ────────────────────────────────────────────────────────────
+
+@router.get("/timetable/status/{run_id}")
+def get_run_status(run_id: str, db: Session = Depends(get_db)):
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(404, "Run not found")
+    import json
+    checkpoint = json.loads(run.checkpoint_data) if run.checkpoint_data else None
+    return {"run_id": run_id, "status": run.status, "stage": run.stage, "checkpoint": checkpoint}
+
+
+@router.post("/timetable/approve/{run_id}")
+def approve_run(run_id: str, db: Session = Depends(get_db)):
+    import asyncio, json
+    orchestrator = AgentOrchestrator(db_session_factory=SessionLocal)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        result = loop.run_until_complete(orchestrator.resume(run_id, approved=True, db_session_factory=SessionLocal))
+    finally:
+        loop.close()
+    return result
+
+
+@router.post("/timetable/reject/{run_id}")
+def reject_run(run_id: str, db: Session = Depends(get_db)):
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(404, "Run not found")
+    run.status = "rejected"
+    db.commit()
+    return {"run_id": run_id, "status": "rejected"}
+
 
 # ── Chat ──────────────────────────────────────────────────────────────────────
 
