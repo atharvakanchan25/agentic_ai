@@ -154,6 +154,11 @@
 /* ── Empty ── */
 .empty-msg { color: var(--text-muted); font-size: 13px; padding: 16px 0; text-align: center; }
 
+/* ── Timeslot grid ── */
+.ts-grid th, .ts-grid td { text-align: center; padding: 10px 12px; }
+.ts-grid th:first-child, .ts-grid td:first-child { text-align: left; }
+.ts-grid tbody tr:hover { background: var(--primary-light); }
+
 /* ── Responsive ── */
 @media (max-width: 600px) {
   .entity-form { grid-template-columns: 1fr; }

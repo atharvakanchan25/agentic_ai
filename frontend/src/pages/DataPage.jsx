@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import EntityTable from '../components/EntityTable'
 import {
-  getDepartments, createDepartment, deleteDepartment,
-  getSubjects,    createSubject,    deleteSubject,
-  getRooms,       createRoom,       deleteRoom,
-  getFaculty,     createFaculty,    deleteFaculty,
-  getDivisions,   createDivision,   deleteDivision,
+  getDepartments, createDepartment, updateDepartment, deleteDepartment,
+  getSubjects,    createSubject,    updateSubject,    deleteSubject,
+  getRooms,       createRoom,       updateRoom,       deleteRoom,
+  getFaculty,     createFaculty,    updateFaculty,    deleteFaculty,
+  getDivisions,   createDivision,   updateDivision,   deleteDivision,
   getTimeslots
 } from '../api/client'
 import './DataPage.css'
@@ -53,7 +53,8 @@ export default function DataPage() {
         {active === 'Departments' && (
           <EntityTable
             title="Department" emptyIcon="🏛️"
-            fetchFn={getDepartments} createFn={createDepartment} deleteFn={deleteDepartment}
+            fetchFn={getDepartments} createFn={createDepartment}
+            updateFn={updateDepartment} deleteFn={deleteDepartment}
             columns={[
               { key: 'id',   label: 'ID' },
               { key: 'name', label: 'Name' },
@@ -69,7 +70,8 @@ export default function DataPage() {
         {active === 'Subjects' && (
           <EntityTable
             title="Subject" emptyIcon="📚"
-            fetchFn={getSubjects} createFn={createSubject} deleteFn={deleteSubject}
+            fetchFn={getSubjects} createFn={createSubject}
+            updateFn={updateSubject} deleteFn={deleteSubject}
             extraData={{ departments }}
             columns={[
               { key: 'name',           label: 'Name' },
@@ -94,7 +96,8 @@ export default function DataPage() {
         {active === 'Rooms' && (
           <EntityTable
             title="Room" emptyIcon="🚪"
-            fetchFn={getRooms} createFn={createRoom} deleteFn={deleteRoom}
+            fetchFn={getRooms} createFn={createRoom}
+            updateFn={updateRoom} deleteFn={deleteRoom}
             columns={[
               { key: 'room_number', label: 'Room No.' },
               { key: 'floor',       label: 'Floor' },
@@ -117,7 +120,8 @@ export default function DataPage() {
         {active === 'Faculty' && (
           <EntityTable
             title="Faculty" emptyIcon="👨🏫"
-            fetchFn={getFaculty} createFn={createFaculty} deleteFn={deleteFaculty}
+            fetchFn={getFaculty} createFn={createFaculty}
+            updateFn={updateFaculty} deleteFn={deleteFaculty}
             extraData={{ departments }}
             columns={[
               { key: 'name',        label: 'Name' },
@@ -134,7 +138,8 @@ export default function DataPage() {
         {active === 'Divisions' && (
           <EntityTable
             title="Division" emptyIcon="👥"
-            fetchFn={getDivisions} createFn={createDivision} deleteFn={deleteDivision}
+            fetchFn={getDivisions} createFn={createDivision}
+            updateFn={updateDivision} deleteFn={deleteDivision}
             extraData={{ departments }}
             columns={[
               { key: 'name',          label: 'Name' },
@@ -153,40 +158,62 @@ export default function DataPage() {
         {active === 'Timeslots' && (
           <div className="entity-section fade-in">
             <div className="entity-header">
-              <h3 className="section-title">Timeslots</h3>
+              <h3 className="section-title">🕐 Weekly Timeslots</h3>
               {!tsLoading && <span className="row-count badge badge-purple">{timeslots.length} slots</span>}
             </div>
-            <p style={{fontSize:13, color:'var(--text-muted)'}}>
-              Timeslots are seeded automatically. Run <code style={{background:'var(--bg-subtle)',padding:'1px 6px',borderRadius:4}}>python scripts/seed.py</code> to populate.
+            <p style={{fontSize:13, color:'var(--text-muted)', marginBottom:16}}>
+              Timeslots are auto-seeded (Mon–Fri, 6 slots/day). Run
+              <code style={{background:'var(--bg-subtle)',padding:'1px 6px',borderRadius:4,margin:'0 4px'}}>python scripts/seed.py</code>
+              to populate.
             </p>
             {tsLoading ? (
               <div className="skeleton-table">
-                {[1,2,3].map(i => <div key={i} className="skeleton" style={{height:36,marginBottom:6}} />)}
+                {[1,2,3,4,5,6].map(i => <div key={i} className="skeleton" style={{height:44,marginBottom:6}} />)}
               </div>
             ) : timeslots.length === 0 ? (
               <div className="empty-state">
                 <span className="empty-state-icon">🕐</span>
                 <span>No timeslots found — run the seed script</span>
               </div>
-            ) : (
-              <div className="table-wrapper">
-                <table>
-                  <thead>
-                    <tr><th>Day</th><th>Slot #</th><th>Start</th><th>End</th></tr>
-                  </thead>
-                  <tbody>
-                    {timeslots.map(t => (
-                      <tr key={t.id}>
-                        <td>{t.day}</td>
-                        <td><span className="badge badge-purple">#{t.slot_number}</span></td>
-                        <td>{t.start_time}</td>
-                        <td>{t.end_time}</td>
+            ) : (() => {
+              const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday']
+              const slots = [...new Map(timeslots.map(t => [t.slot_number, {slot_number: t.slot_number, start_time: t.start_time, end_time: t.end_time}])).values()].sort((a,b) => a.slot_number - b.slot_number)
+              const grid = {}
+              timeslots.forEach(t => { grid[`${t.day}_${t.slot_number}`] = t })
+              return (
+                <div className="table-wrapper">
+                  <table className="ts-grid">
+                    <thead>
+                      <tr>
+                        <th style={{width:110}}>⏰ Time</th>
+                        {DAYS.map(d => <th key={d}>{d.slice(0,3)}</th>)}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody>
+                      {slots.map(s => (
+                        <tr key={s.slot_number}>
+                          <td style={{fontWeight:600, fontSize:12, color:'var(--text-muted)', whiteSpace:'nowrap'}}>
+                            <span className="badge badge-purple" style={{marginRight:4}}>#{s.slot_number}</span>
+                            {s.start_time}–{s.end_time}
+                          </td>
+                          {DAYS.map(d => {
+                            const t = grid[`${d}_${s.slot_number}`]
+                            return (
+                              <td key={d} style={{textAlign:'center'}}>
+                                {t
+                                  ? <span className="badge badge-green" style={{fontSize:11}}>✓ Active</span>
+                                  : <span style={{color:'var(--text-muted)',fontSize:12}}>—</span>
+                                }
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            })()}
           </div>
         )}
       </div>
