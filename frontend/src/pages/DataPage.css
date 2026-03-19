@@ -14,10 +14,10 @@
 }
 .section-tab:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); opacity: 1; transform: none; }
 .section-tab.active {
-  background: var(--gradient-primary);
+  background: var(--primary);
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 4px 14px var(--primary-glow);
+  box-shadow: 0 4px 14px rgba(79,70,229,0.3);
 }
 
 /* ── Entity section ── */
