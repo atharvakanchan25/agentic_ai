@@ -64,7 +64,7 @@
   background: #a5b4fc;
   border-radius: 2px;
 }
-.nav-icon { font-size: 15px; }
+.nav-icon { font-size: 15px; line-height: 1; flex-shrink: 0; }
 
 /* ── Main content ─────────────────────────────────────────────────────────── */
 .main {
