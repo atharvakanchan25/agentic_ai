@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { login, register } from '../api/client'
 import './AuthPage.css'
 
 /* ── Password strength calculator ─────────────────────────────────────────── */
@@ -113,32 +114,34 @@ export default function AuthPage({ onAuth }) {
     if (siPass.length < 6)    { setAlert({ type: 'error', text: 'Password must be at least 6 characters.' }); return }
 
     setLoading(true); setAlert(null)
-    // Simulate API call — replace with real auth endpoint
-    await new Promise(r => setTimeout(r, 1200))
-    setLoading(false)
-
-    // Demo: accept any valid-format credentials
-    if (siEmail && siPass) {
+    try {
+      const res = await login({ email: siEmail, password: siPass })
       setAlert({ type: 'success', text: 'Signed in successfully! Redirecting…' })
-      setTimeout(() => onAuth({ email: siEmail, name: siEmail.split('@')[0] }), 900)
-    } else {
-      setAlert({ type: 'error', text: 'Invalid email or password. Please try again.' })
+      setTimeout(() => onAuth({ ...res.data.user, token: res.data.access_token }), 600)
+    } catch (err) {
+      setAlert({ type: 'error', text: err.response?.data?.detail || 'Invalid email or password.' })
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleSignUp = async (e) => {
     e.preventDefault()
-    if (suNameStatus    === 'invalid') { setAlert({ type: 'error', text: 'Name must be at least 2 characters.' }); return }
-    if (suEmailStatus   === 'invalid') { setAlert({ type: 'error', text: 'Please enter a valid email address.' }); return }
-    if (strength.score  < 2)           { setAlert({ type: 'error', text: 'Password is too weak. Follow the rules below.' }); return }
-    if (suConfirm !== suPass)          { setAlert({ type: 'error', text: 'Passwords do not match.' }); return }
+    if (suNameStatus   === 'invalid') { setAlert({ type: 'error', text: 'Name must be at least 2 characters.' }); return }
+    if (suEmailStatus  === 'invalid') { setAlert({ type: 'error', text: 'Please enter a valid email address.' }); return }
+    if (strength.score < 2)           { setAlert({ type: 'error', text: 'Password is too weak. Follow the rules below.' }); return }
+    if (suConfirm !== suPass)         { setAlert({ type: 'error', text: 'Passwords do not match.' }); return }
 
     setLoading(true); setAlert(null)
-    await new Promise(r => setTimeout(r, 1400))
-    setLoading(false)
-
-    setAlert({ type: 'success', text: 'Account created! Signing you in…' })
-    setTimeout(() => onAuth({ email: suEmail, name: suName }), 900)
+    try {
+      const res = await register({ name: suName, email: suEmail, password: suPass })
+      setAlert({ type: 'success', text: 'Account created! Signing you in…' })
+      setTimeout(() => onAuth({ ...res.data.user, token: res.data.access_token }), 600)
+    } catch (err) {
+      setAlert({ type: 'error', text: err.response?.data?.detail || 'Registration failed. Try again.' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

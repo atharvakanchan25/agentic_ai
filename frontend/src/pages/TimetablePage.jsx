@@ -285,12 +285,17 @@ export default function TimetablePage() {
             <div className="card" style={{marginTop: 12}}>
               <h4 style={{marginBottom: 10, fontWeight: 700, color: 'var(--danger)'}}>⚠️ Issues Detected</h4>
               <ul className="insights-list">
-                {(result.issues || result.errors || result.missing || []).map((issue, i) => (
-                  <li key={i} style={{borderLeftColor: 'var(--danger)'}}>
-                    {issue.message || issue}
-                  </li>
+                {result.stage === 'completeness' && (result.missing || []).map((m, i) => (
+                  <li key={i} style={{borderLeftColor: 'var(--danger)'}}>Missing data: <strong>{m}</strong> — please add {m} in the Data tab first</li>
+                ))}
+                {result.stage === 'completeness' && (result.insufficient_data || []).map((m, i) => (
+                  <li key={i} style={{borderLeftColor: 'var(--warning)'}}>{m}</li>
+                ))}
+                {result.stage !== 'completeness' && (result.issues || result.errors || []).map((issue, i) => (
+                  <li key={i} style={{borderLeftColor: 'var(--danger)'}}>{issue.message || issue}</li>
                 ))}
               </ul>
+              <p style={{marginTop: 12, fontSize: 13, color: 'var(--text-muted)'}}>Go to the <strong>Data tab</strong> and add all required data: Departments → Subjects → Rooms → Faculty → Divisions</p>
               {result.suggestions?.length > 0 && (
                 <>
                   <h4 style={{marginTop: 16, marginBottom: 8, fontWeight: 700}}>💡 Suggestions</h4>
