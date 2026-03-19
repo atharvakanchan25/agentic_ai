@@ -228,21 +228,23 @@ def generate_timetable(
     current_user: User = Depends(get_current_user)
 ):
     dept_ids  = request.department_ids
+    depts     = db.query(Department).filter(Department.id.in_(dept_ids)).all()
     divisions = db.query(Division).filter(Division.department_id.in_(dept_ids)).all()
     subjects  = db.query(Subject).filter(Subject.department_id.in_(dept_ids)).all()
     rooms     = db.query(Room).all()
     faculty   = db.query(Faculty).filter(Faculty.department_id.in_(dept_ids)).all()
     timeslots = db.query(TimeSlot).all()
 
-    if not divisions or not subjects or not rooms or not timeslots:
+    if not depts or not divisions or not subjects or not rooms or not timeslots:
         raise HTTPException(400, "Insufficient data. Add departments, subjects, rooms, and divisions first.")
 
     input_data = {
-        "divisions": [{"id": d.id, "name": d.name, "student_count": d.student_count, "department_id": d.department_id} for d in divisions],
-        "subjects":  [{"id": s.id, "name": s.name, "code": s.code, "hours_per_week": s.hours_per_week, "is_lab": s.is_lab, "department_id": s.department_id} for s in subjects],
-        "rooms":     [{"id": r.id, "room_number": r.room_number, "capacity": r.capacity, "is_lab": r.is_lab, "floor": r.floor} for r in rooms],
-        "faculty":   [{"id": f.id, "name": f.name, "employee_id": f.employee_id, "department_id": f.department_id} for f in faculty],
-        "timeslots": [{"id": t.id, "day": t.day, "slot_number": t.slot_number, "start_time": t.start_time, "end_time": t.end_time} for t in timeslots],
+        "departments": [{"id": d.id, "name": d.name, "code": d.code} for d in depts],
+        "divisions":   [{"id": d.id, "name": d.name, "year": d.year, "student_count": d.student_count, "department_id": d.department_id} for d in divisions],
+        "subjects":    [{"id": s.id, "name": s.name, "code": s.code, "hours_per_week": s.hours_per_week, "is_lab": s.is_lab, "department_id": s.department_id} for s in subjects],
+        "rooms":       [{"id": r.id, "room_number": r.room_number, "capacity": r.capacity, "is_lab": r.is_lab, "floor": r.floor} for r in rooms],
+        "faculty":     [{"id": f.id, "name": f.name, "employee_id": f.employee_id, "department_id": f.department_id} for f in faculty],
+        "timeslots":   [{"id": t.id, "day": t.day, "slot_number": t.slot_number, "start_time": t.start_time, "end_time": t.end_time} for t in timeslots],
     }
 
     hitl = request.hitl_enabled if hasattr(request, "hitl_enabled") else False

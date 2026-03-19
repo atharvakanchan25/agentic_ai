@@ -148,8 +148,14 @@ class AgentOrchestrator:
             return {"status": "failed", "stage": "validation", "errors": validation.get("errors", []), "pipeline_log": self.pipeline_log}
 
         completeness = await self._call(self.validation_agent, "check_data_completeness", input_data)
-        if completeness.get("status") == "incomplete":
-            return {"status": "failed", "stage": "completeness", "missing": completeness.get("missing_entities", []), "pipeline_log": self.pipeline_log}
+        if completeness.get("status") in ("incomplete", "insufficient"):
+            return {
+                "status": "failed",
+                "stage": "completeness",
+                "missing": completeness.get("missing_entities", []),
+                "insufficient_data": completeness.get("insufficient_data", []),
+                "pipeline_log": self.pipeline_log
+            }
 
         constraints = await self._call(self.validation_agent, "verify_constraints", input_data)
         if constraints.get("status") == "unsatisfiable":
