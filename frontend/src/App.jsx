@@ -56,7 +56,7 @@ export default function App() {
         <header className="header">
           <div className="header-inner">
             <div className="logo">
-              <div className="logo-icon">🎓</div>
+              <span className="logo-icon">🎓</span>
               <span className="logo-text">Timetable AI</span>
               <span className="logo-sub">Multi-Agent Scheduling</span>
             </div>
