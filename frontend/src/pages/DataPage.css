@@ -1,50 +1,51 @@
-.data-page { display: flex; flex-direction: column; gap: 16px; }
+.data-page { display: flex; flex-direction: column; gap: 20px; }
 
-/* ── Section tabs ─────────────────────────────────────────────────────────── */
-.section-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+/* ── Section tabs ── */
+.section-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .section-tab {
   background: var(--white);
   color: var(--text-secondary);
   border: 1.5px solid var(--border);
   padding: 8px 18px;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  font-weight: 500;
-  transition: background var(--transition), color var(--transition), border-color var(--transition);
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all var(--transition);
 }
-.section-tab:hover { background: var(--bg-subtle); opacity: 1; transform: none; }
-.section-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-
-/* ── Entity section ───────────────────────────────────────────────────────── */
-.entity-section { display: flex; flex-direction: column; gap: 16px; }
-
-.entity-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.section-tab:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); opacity: 1; transform: none; }
+.section-tab.active {
+  background: var(--gradient-primary);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 14px var(--primary-glow);
 }
-.section-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+
+/* ── Entity section ── */
+.entity-section { display: flex; flex-direction: column; gap: 18px; }
+
+.entity-header { display: flex; align-items: center; gap: 10px; }
+.section-title { font-size: 17px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.01em; }
 .row-count { font-size: 11px; }
 
-/* ── Form ─────────────────────────────────────────────────────────────────── */
+/* ── Form ── */
 .entity-form {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 14px;
   align-items: end;
-  background: var(--bg-subtle);
-  padding: 18px;
+  background: linear-gradient(135deg, #fafbff 0%, #f5f3ff 100%);
+  padding: 20px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--border);
+  border: 1px solid #e0e7ff;
 }
 
 .form-field { display: flex; flex-direction: column; gap: 5px; }
 .form-field label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 .required-star { color: var(--danger); margin-left: 2px; }
 
@@ -53,7 +54,7 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  padding: 9px 12px;
+  padding: 10px 12px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--white);
@@ -64,16 +65,23 @@
 .checkbox-label:hover { border-color: var(--primary); }
 .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); }
 
-/* ── Buttons ──────────────────────────────────────────────────────────────── */
-.btn-primary { background: var(--primary); color: #fff; padding: 10px 22px; align-self: end; font-weight: 600; }
-.btn-primary:hover:not(:disabled) { background: var(--primary-dark); opacity: 1; }
+/* ── Buttons ── */
+.btn-primary {
+  background: var(--gradient-primary);
+  color: #fff;
+  padding: 10px 22px;
+  align-self: end;
+  font-weight: 700;
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+.btn-primary:hover:not(:disabled) { opacity: 1; transform: translateY(-2px); box-shadow: 0 6px 20px var(--primary-glow); }
 
 .btn-danger-sm {
   background: var(--danger-light);
   color: var(--danger);
-  padding: 5px 8px;
+  padding: 5px 10px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   border-radius: var(--radius-sm);
 }
 .btn-danger-sm:hover:not(:disabled) { background: #fecaca; opacity: 1; }
@@ -81,9 +89,9 @@
 .btn-edit-sm {
   background: var(--warning-light);
   color: var(--warning);
-  padding: 5px 8px;
+  padding: 5px 10px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   border-radius: var(--radius-sm);
 }
 .btn-edit-sm:hover:not(:disabled) { background: #fde68a; opacity: 1; }
@@ -91,17 +99,17 @@
 .btn-save-sm {
   background: var(--success-light);
   color: var(--success);
-  padding: 5px 10px;
+  padding: 5px 12px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   border-radius: var(--radius-sm);
 }
-.btn-save-sm:hover:not(:disabled) { background: #bbf7d0; opacity: 1; }
+.btn-save-sm:hover:not(:disabled) { background: #a7f3d0; opacity: 1; }
 
 .btn-cancel-sm {
   background: var(--bg-subtle);
   color: var(--text-muted);
-  padding: 5px 8px;
+  padding: 5px 10px;
   font-size: 12px;
   border-radius: var(--radius-sm);
 }
@@ -118,10 +126,9 @@
 .btn-reset:hover:not(:disabled) { background: var(--border); opacity: 1; }
 
 .action-btns { display: flex; gap: 4px; align-items: center; }
-
 .form-actions { display: flex; gap: 8px; align-items: end; }
 
-/* ── Spinner ──────────────────────────────────────────────────────────────── */
+/* ── Spinner ── */
 .spinner {
   display: inline-block;
   width: 13px;
@@ -129,20 +136,25 @@
   border: 2px solid rgba(255,255,255,0.4);
   border-top-color: #fff;
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: spin 0.65s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Table wrapper ────────────────────────────────────────────────────────── */
-.table-wrapper { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+/* ── Table ── */
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
 
-/* ── Skeleton ─────────────────────────────────────────────────────────────── */
+/* ── Skeleton ── */
 .skeleton-table { padding: 4px 0; }
 
-/* ── Empty ────────────────────────────────────────────────────────────────── */
+/* ── Empty ── */
 .empty-msg { color: var(--text-muted); font-size: 13px; padding: 16px 0; text-align: center; }
 
-/* ── Responsive ───────────────────────────────────────────────────────────── */
+/* ── Responsive ── */
 @media (max-width: 600px) {
   .entity-form { grid-template-columns: 1fr; }
 }
