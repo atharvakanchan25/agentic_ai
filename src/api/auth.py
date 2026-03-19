@@ -2,7 +2,7 @@
 Auth utilities — password hashing, JWT creation/verification, FastAPI dependency
 """
 from datetime import datetime, timedelta
-from passlib.context import CryptContext
+import bcrypt
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -12,15 +12,14 @@ from src.database.database import get_db
 from src.database.models import User
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
-_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 _bearer = HTTPBearer()
 
 
 def hash_password(plain: str) -> str:
-    return _pwd.hash(plain)
+    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 def create_access_token(data: dict) -> str:
     payload = data.copy()

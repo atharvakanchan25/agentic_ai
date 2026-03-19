@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import EntityTable from '../components/EntityTable'
 import {
-  getDepartments, createDepartment, deleteDepartment,
-  getSubjects,    createSubject,    deleteSubject,
-  getRooms,       createRoom,       deleteRoom,
-  getFaculty,     createFaculty,    deleteFaculty,
-  getDivisions,   createDivision,   deleteDivision,
+  getDepartments, createDepartment, updateDepartment, deleteDepartment,
+  getSubjects,    createSubject,    updateSubject,    deleteSubject,
+  getRooms,       createRoom,       updateRoom,       deleteRoom,
+  getFaculty,     createFaculty,    updateFaculty,    deleteFaculty,
+  getDivisions,   createDivision,   updateDivision,   deleteDivision,
   getTimeslots
 } from '../api/client'
 import './DataPage.css'
@@ -53,7 +53,7 @@ export default function DataPage() {
         {active === 'Departments' && (
           <EntityTable
             title="Department" emptyIcon="🏛️"
-            fetchFn={getDepartments} createFn={createDepartment} deleteFn={deleteDepartment}
+            fetchFn={getDepartments} createFn={createDepartment} updateFn={updateDepartment} deleteFn={deleteDepartment}
             columns={[
               { key: 'id',   label: 'ID' },
               { key: 'name', label: 'Name' },
@@ -69,7 +69,7 @@ export default function DataPage() {
         {active === 'Subjects' && (
           <EntityTable
             title="Subject" emptyIcon="📚"
-            fetchFn={getSubjects} createFn={createSubject} deleteFn={deleteSubject}
+            fetchFn={getSubjects} createFn={createSubject} updateFn={updateSubject} deleteFn={deleteSubject}
             extraData={{ departments }}
             columns={[
               { key: 'name',           label: 'Name' },
@@ -94,7 +94,7 @@ export default function DataPage() {
         {active === 'Rooms' && (
           <EntityTable
             title="Room" emptyIcon="🚪"
-            fetchFn={getRooms} createFn={createRoom} deleteFn={deleteRoom}
+            fetchFn={getRooms} createFn={createRoom} updateFn={updateRoom} deleteFn={deleteRoom}
             columns={[
               { key: 'room_number', label: 'Room No.' },
               { key: 'floor',       label: 'Floor' },
@@ -117,7 +117,7 @@ export default function DataPage() {
         {active === 'Faculty' && (
           <EntityTable
             title="Faculty" emptyIcon="👨🏫"
-            fetchFn={getFaculty} createFn={createFaculty} deleteFn={deleteFaculty}
+            fetchFn={getFaculty} createFn={createFaculty} updateFn={updateFaculty} deleteFn={deleteFaculty}
             extraData={{ departments }}
             columns={[
               { key: 'name',        label: 'Name' },
@@ -134,7 +134,7 @@ export default function DataPage() {
         {active === 'Divisions' && (
           <EntityTable
             title="Division" emptyIcon="👥"
-            fetchFn={getDivisions} createFn={createDivision} deleteFn={deleteDivision}
+            fetchFn={getDivisions} createFn={createDivision} updateFn={updateDivision} deleteFn={deleteDivision}
             extraData={{ departments }}
             columns={[
               { key: 'name',          label: 'Name' },

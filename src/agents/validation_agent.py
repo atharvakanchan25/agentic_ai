@@ -34,7 +34,7 @@ class ValidationAgent(BaseAgent):
                 "field_types": {"name": str, "code": str, "hours_per_week": int, "department_id": int, "is_lab": bool},
                 "field_constraints": {
                     "hours_per_week": {"min": 1, "max": 10},
-                    "code": {"pattern": r"^[A-Z]{2,8}[0-9]{3}$"}
+                    "code": {"pattern": r"^[A-Z0-9]{2,12}$"}
                 }
             },
             "room": {
@@ -49,7 +49,7 @@ class ValidationAgent(BaseAgent):
                 "required_fields": ["name", "employee_id", "department_id"],
                 "field_types": {"name": str, "employee_id": str, "department_id": int},
                 "field_constraints": {
-                    "employee_id": {"pattern": r"^[A-Z]{2}[0-9]{4,6}$"}
+                    "employee_id": {"pattern": r"^[A-Z0-9]{2,10}$"}
                 }
             },
             "division": {
@@ -112,10 +112,18 @@ class ValidationAgent(BaseAgent):
         }
         
         # Validate each entity type
-        for entity_type in ["departments", "subjects", "rooms", "faculty", "divisions", "timeslots"]:
-            if entity_type in data:
-                entity_validation = await self._validate_entity_list(entity_type[:-1], data[entity_type])
-                validation_results["entity_results"][entity_type] = entity_validation
+        entity_key_map = {
+            "departments": "department",
+            "subjects": "subject",
+            "rooms": "room",
+            "faculty": "faculty",
+            "divisions": "division",
+            "timeslots": "timeslot",
+        }
+        for entity_key, entity_type in entity_key_map.items():
+            if entity_key in data:
+                entity_validation = await self._validate_entity_list(entity_type, data[entity_key])
+                validation_results["entity_results"][entity_key] = entity_validation
                 
                 if entity_validation["errors"]:
                     validation_results["errors"].extend(entity_validation["errors"])
