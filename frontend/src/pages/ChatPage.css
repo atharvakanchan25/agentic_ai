@@ -8,8 +8,8 @@
   height: calc(100vh - 120px);
   padding: 0;
   overflow: hidden;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 /* ── Header ── */
@@ -21,8 +21,8 @@
   border-bottom: 1px solid var(--border);
   font-weight: 800;
   font-size: 15px;
-  background: linear-gradient(135deg, #fafbff 0%, #f5f3ff 100%);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 .online-indicator {
   display: flex;
@@ -80,10 +80,10 @@
   font-weight: 450;
 }
 .message.user .bubble {
-  background: var(--gradient-primary);
+  background: var(--primary);
   color: #fff;
   border-bottom-right-radius: 4px;
-  box-shadow: 0 4px 16px var(--primary-glow);
+  box-shadow: 0 4px 16px rgba(79,70,229,0.25);
 }
 .message.bot .bubble {
   background: var(--white);
@@ -143,7 +143,7 @@
   color: var(--primary);
   opacity: 1;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--primary-glow);
+  box-shadow: 0 4px 12px rgba(79,70,229,0.2);
 }
 
 /* ── Input row ── */
@@ -153,22 +153,22 @@
   padding: 14px 22px;
   border-top: 1px solid var(--border);
   background: var(--white);
-  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 .chat-input-row input { flex: 1; border-radius: 30px; padding: 10px 18px; }
 .send-btn {
-  background: var(--gradient-primary);
+  background: var(--primary);
   color: #fff;
   padding: 10px 24px;
   white-space: nowrap;
   font-weight: 700;
   border-radius: 30px;
-  box-shadow: 0 4px 12px var(--primary-glow);
+  box-shadow: 0 4px 12px rgba(79,70,229,0.25);
 }
-.send-btn:hover:not(:disabled) { opacity: 1; transform: translateY(-2px); box-shadow: 0 6px 20px var(--primary-glow); }
+.send-btn:hover:not(:disabled) { opacity: 1; transform: translateY(-2px); background: var(--primary-dark); box-shadow: 0 6px 20px rgba(79,70,229,0.35); }
 
 /* ── Responsive ── */
 @media (max-width: 600px) {
   .bubble { max-width: 90%; }
-  .chat-container { height: calc(100vh - 100px); border-radius: var(--radius-lg); }
+  .chat-container { height: calc(100vh - 100px); border-radius: var(--radius-md); }
 }
