@@ -51,3 +51,11 @@ LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# OpenTelemetry
+OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")  # e.g. http://localhost:4317
+OTEL_CONSOLE_EXPORT = os.getenv("OTEL_CONSOLE_EXPORT", "false")              # "true" to log spans to console
+
+# Agent security
+AGENT_RATE_LIMIT_PER_MINUTE = int(os.getenv("AGENT_RATE_LIMIT_PER_MINUTE", "120"))
+AGENT_MAX_PAYLOAD_MB        = int(os.getenv("AGENT_MAX_PAYLOAD_MB", "5"))
