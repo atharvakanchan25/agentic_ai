@@ -80,7 +80,7 @@ class ValidationAgent(BaseAgent):
             self.mcp_client.register_handler("validate_entity", self._handle_validate_entity)
             self.mcp_client.register_handler("batch_validate", self._handle_batch_validate)
     
-    async def process_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def _handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Process validation requests"""
         method = request.get("method")
         params = request.get("params", {})

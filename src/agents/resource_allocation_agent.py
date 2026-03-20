@@ -26,7 +26,7 @@ class ResourceAllocationAgent(BaseAgent):
     async def _cleanup_agent(self):
         pass
 
-    async def process_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def _handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         method = request.get("method")
         params = request.get("params", {})
 

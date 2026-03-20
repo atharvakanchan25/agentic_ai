@@ -3,7 +3,7 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 pydantic>=2.9.0
 
-# Database (2.0.36+ supports Python 3.13)
+# Database
 sqlalchemy>=2.0.36
 
 # Optimization
@@ -23,3 +23,9 @@ websockets>=13.0
 # Auth
 passlib[bcrypt]>=1.7.4
 python-jose[cryptography]>=3.3.0
+
+# OpenTelemetry
+opentelemetry-api>=1.25.0
+opentelemetry-sdk>=1.25.0
+opentelemetry-instrumentation-fastapi>=0.46b0
+opentelemetry-exporter-otlp-proto-grpc>=1.25.0

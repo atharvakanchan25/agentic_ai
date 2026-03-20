@@ -446,6 +446,51 @@ def chat(request: ChatRequest, db: Session = Depends(get_db), current_user: User
     }
 
 
+# ── Security / Observability / A2A ──────────────────────────────────────────────────────────────────
+
+@router.get("/security/audit")
+def get_audit_log(limit: int = 100, _: User = Depends(get_current_user)):
+    """Recent agent invocation audit log."""
+    from src.security.agent_security import audit_log
+    return {"entries": audit_log.recent(limit), "total": len(audit_log._log)}
+
+@router.get("/security/audit/errors")
+def get_audit_errors(_: User = Depends(get_current_user)):
+    from src.security.agent_security import audit_log
+    return {"errors": audit_log.errors()}
+
+@router.get("/observability/trace")
+def get_trace_info(_: User = Depends(get_current_user)):
+    """Current OpenTelemetry trace context."""
+    from src.observability.telemetry import get_current_trace_id, get_current_span_id
+    return {"trace_id": get_current_trace_id(), "span_id": get_current_span_id()}
+
+@router.get("/a2a/agents")
+def list_a2a_agents(_: User = Depends(get_current_user)):
+    """List all registered agents and their capabilities (A2A agent cards)."""
+    from src.a2a.registry import agent_registry
+    return {"agents": agent_registry.list_all()}
+
+@router.get("/a2a/agents/{agent_name}")
+def get_agent_card(agent_name: str, _: User = Depends(get_current_user)):
+    from src.a2a.registry import agent_registry
+    card = agent_registry.get_card(agent_name)
+    if not card:
+        raise HTTPException(404, f"Agent '{agent_name}' not found")
+    return card.to_dict()
+
+@router.get("/a2a/agents/capability/{capability}")
+def find_agents_by_capability(capability: str, _: User = Depends(get_current_user)):
+    from src.a2a.registry import agent_registry
+    cards = agent_registry.find_by_capability(capability)
+    return {"capability": capability, "agents": [c.to_dict() for c in cards]}
+
+@router.get("/a2a/tasks")
+def get_a2a_task_history(limit: int = 50, _: User = Depends(get_current_user)):
+    from src.a2a.registry import agent_registry
+    return {"tasks": agent_registry.task_history(limit)}
+
+
 # ── Explainability ────────────────────────────────────────────────────────────
 
 @router.post("/timetable/explain")

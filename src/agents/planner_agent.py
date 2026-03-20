@@ -15,7 +15,7 @@ class PlannerAgent(BaseAgent):
     def _register_custom_handlers(self): pass
     async def _cleanup_agent(self): pass
 
-    async def process_request(self, request: dict[str, Any]) -> dict[str, Any]:
+    async def _handle_request(self, request: dict[str, Any]) -> dict[str, Any]:
         method = request.get("method")
         if method == "plan_pipeline":
             return await self.plan_pipeline(request.get("params", {}))
