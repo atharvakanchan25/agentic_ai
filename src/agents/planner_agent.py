@@ -1,6 +1,6 @@
 """
-Planner Agent - Decomposes the scheduling task dynamically based on input size/complexity.
-Decides which pipeline steps to run and in what mode (greedy vs CP-SAT).
+Planner Agent - Decomposes the scheduling task dynamically.
+Learns from past solver outcomes stored in LongTermMemory.
 """
 from typing import Any
 from .base_agent import BaseAgent
@@ -22,16 +22,6 @@ class PlannerAgent(BaseAgent):
         return {"status": "error", "message": f"Unknown method: {method}"}
 
     async def plan_pipeline(self, data: dict[str, Any]) -> dict[str, Any]:
-        """
-        Analyse input and return a plan dict that the orchestrator follows.
-
-        Plan fields:
-          solver_mode   : "greedy" | "cp_sat"
-          skip_steps    : list of step names to skip
-          parallel_depts: bool — schedule each dept independently in parallel
-          hitl_after    : list of step names where human approval is required
-          reason        : human-readable explanation
-        """
         divisions  = data.get("divisions", [])
         subjects   = data.get("subjects", [])
         rooms      = data.get("rooms", [])
@@ -41,30 +31,61 @@ class PlannerAgent(BaseAgent):
         n_subjects  = len(subjects)
         n_timeslots = len(timeslots)
 
-        # Complexity heuristic: variable count for CP-SAT
         cp_vars = n_divisions * n_subjects * len(rooms) * n_timeslots
         is_large = cp_vars > 5_000
 
+        # ── Learn from past runs ──────────────────────────────────────────────
+        solver_mode = "greedy" if is_large else "cp_sat"
+        reason_suffix = ""
+
+        if self.long_term_memory:
+            past = self.long_term_memory.recall_solver_outcomes(limit=10)
+            if past:
+                # Find outcomes for similar problem sizes (within 50% of current)
+                similar = [
+                    p for p in past
+                    if abs(p.get("cp_vars", 0) - cp_vars) / max(cp_vars, 1) < 0.5
+                ]
+                if similar:
+                    cp_sat_failures = sum(
+                        1 for p in similar
+                        if p.get("solver_mode") == "cp_sat" and p.get("status") != "success"
+                    )
+                    cp_sat_successes = sum(
+                        1 for p in similar
+                        if p.get("solver_mode") == "cp_sat" and p.get("status") == "success"
+                    )
+                    # If CP-SAT failed more than it succeeded on similar problems, use greedy
+                    if cp_sat_failures > cp_sat_successes and not is_large:
+                        solver_mode = "greedy"
+                        reason_suffix = f" (switched to greedy: CP-SAT failed {cp_sat_failures}/{len(similar)} similar runs)"
+                    elif cp_sat_successes > 0 and is_large:
+                        # CP-SAT worked on similar large problems before — try it
+                        solver_mode = "cp_sat"
+                        reason_suffix = f" (CP-SAT succeeded {cp_sat_successes}/{len(similar)} similar runs despite size)"
+
         plan: dict[str, Any] = {
-            "solver_mode":    "greedy" if is_large else "cp_sat",
+            "solver_mode":    solver_mode,
+            "cp_vars":        cp_vars,
             "skip_steps":     [],
             "parallel_depts": is_large and n_divisions > 4,
-            "hitl_after":     ["validation", "optimization"],  # always ask after these
+            "hitl_after":     ["validation", "optimization"],
             "reason":         "",
         }
 
         if is_large:
             plan["reason"] = (
                 f"Large problem ({cp_vars:,} CP variables). "
-                "Using greedy solver and parallel department scheduling."
+                f"Using {solver_mode} solver."
             )
         else:
             plan["reason"] = (
                 f"Small problem ({cp_vars:,} CP variables). "
-                "Using full CP-SAT solver."
+                f"Using {solver_mode} solver."
             )
 
-        # If no faculty data, skip faculty-constraint step
+        plan["reason"] += reason_suffix
+
         if not data.get("faculty"):
             plan["skip_steps"].append("faculty_constraints")
             plan["reason"] += " No faculty data — skipping faculty constraints."

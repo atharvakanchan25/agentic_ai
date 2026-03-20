@@ -369,15 +369,77 @@ class ValidationAgent(BaseAgent):
     async def check_business_rules(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Check business rules and best practices"""
         self.log_action("Checking business rules")
-        
+
         rule_violations = []
         warnings = []
-        
-        # Rule: No more than 6 hours per day per division
-        # Rule: Lab sessions should be consecutive
-        # Rule: Faculty workload should be balanced
-        # etc.
-        
+
+        divisions = data.get("divisions", [])
+        subjects  = data.get("subjects", [])
+        timeslots = data.get("timeslots", [])
+        faculty   = data.get("faculty", [])
+
+        # ── Rule 1: No more than 6 hours per day per division ─────────────────
+        days = list({ts["day"] for ts in timeslots})
+        for division in divisions:
+            total_hours = sum(s.get("hours_per_week", 0) for s in subjects)
+            if days:
+                avg_per_day = total_hours / len(days)
+                if avg_per_day > 6:
+                    rule_violations.append({
+                        "rule": "max_hours_per_day",
+                        "message": (
+                            f"Division '{division.get('name')}' requires ~{avg_per_day:.1f} hours/day "
+                            f"({total_hours} total over {len(days)} days) — exceeds 6-hour limit."
+                        )
+                    })
+
+        # ── Rule 2: Lab subjects must have at least 2 consecutive slots available ─
+        lab_subjects = [s for s in subjects if s.get("is_lab", False)]
+        if lab_subjects:
+            day_slot_map: Dict[str, List[int]] = {}
+            for ts in timeslots:
+                day_slot_map.setdefault(ts["day"], []).append(ts["slot_number"])
+
+            has_consecutive = any(
+                any(
+                    slot + 1 in slots
+                    for slot in slots
+                )
+                for slots in day_slot_map.values()
+            )
+            if not has_consecutive:
+                rule_violations.append({
+                    "rule": "lab_consecutive_slots",
+                    "message": (
+                        f"{len(lab_subjects)} lab subject(s) exist but no two consecutive "
+                        "time slots are available on any day."
+                    )
+                })
+
+        # ── Rule 3: Faculty workload balance ──────────────────────────────────
+        if faculty and subjects:
+            dept_faculty_count: Dict[int, int] = {}
+            dept_subject_hours: Dict[int, int] = {}
+            for f in faculty:
+                dept_id = f.get("department_id")
+                dept_faculty_count[dept_id] = dept_faculty_count.get(dept_id, 0) + 1
+            for s in subjects:
+                dept_id = s.get("department_id")
+                dept_subject_hours[dept_id] = (
+                    dept_subject_hours.get(dept_id, 0) + s.get("hours_per_week", 0)
+                )
+
+            for dept_id, hours in dept_subject_hours.items():
+                fcount = dept_faculty_count.get(dept_id, 0)
+                if fcount == 0:
+                    warnings.append(
+                        f"Department {dept_id} has {hours} subject hours but no faculty assigned."
+                    )
+                elif hours / fcount > 20:
+                    warnings.append(
+                        f"Department {dept_id}: avg faculty load is {hours/fcount:.1f} hrs/week — consider adding more faculty."
+                    )
+
         return {
             "status": "compliant" if not rule_violations else "violations_found",
             "rule_violations": rule_violations,

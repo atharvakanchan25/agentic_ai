@@ -144,6 +144,7 @@ class TimetableRequest(BaseModel):
     department_ids: List[int]
     save: bool = False
     name: Optional[str] = None
+    hitl_enabled: bool = False
 
 class SavedTimetableOut(BaseModel):
     id: int
@@ -156,3 +157,4 @@ class SavedTimetableOut(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     context: dict = {}
+    history: List[dict] = []

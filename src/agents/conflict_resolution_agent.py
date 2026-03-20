@@ -1,5 +1,6 @@
 """
 Conflict Resolution Agent - ReAct loop: Reason → Act (tools) → Observe → repeat.
+Uses LongTermMemory to avoid historically problematic slots/rooms.
 """
 from typing import Any
 from .base_agent import BaseAgent
@@ -21,7 +22,6 @@ class ConflictResolutionAgent(BaseAgent):
         ])
 
     async def _initialize_agent(self):
-        # Register tools
         self.register_tool("check_room_availability", check_room_availability)
         self.register_tool("find_alternative_slot", find_alternative_slot)
         self.register_tool("find_alternative_room", find_alternative_room)
@@ -54,7 +54,7 @@ class ConflictResolutionAgent(BaseAgent):
 
         for key, entries in slot_index.items():
             room_seen: dict[Any, dict] = {}
-            div_seen: dict[Any, dict] = {}
+            div_seen:  dict[Any, dict] = {}
             for e in entries:
                 rid = e["room_id"]
                 if rid in room_seen:
@@ -74,44 +74,66 @@ class ConflictResolutionAgent(BaseAgent):
     # ── Resolve via ReAct loop ────────────────────────────────────────────────
 
     async def resolve_conflicts(self, data: dict[str, Any]) -> dict[str, Any]:
-        timetable: list[dict] = list(data.get("timetable", []))
-        conflicts: list[dict] = data.get("conflicts", [])
-        all_timeslots: list[dict] = data.get("timeslots", [])
-        all_rooms: list[dict] = data.get("rooms", [])
+        timetable: list[dict]      = list(data.get("timetable", []))
+        conflicts: list[dict]      = data.get("conflicts", [])
+        all_timeslots: list[dict]  = data.get("timeslots", [])
+        all_rooms: list[dict]      = data.get("rooms", [])
         divisions_map: dict[Any, dict] = {d["id"]: d for d in data.get("divisions", [])}
 
         if not conflicts:
             return {"status": "success", "resolved_timetable": timetable, "removed": 0, "react_log": []}
 
+        # ── Load historical bad slots/rooms from long-term memory ─────────────
+        historically_bad_slots: set[str] = set()
+        historically_bad_rooms: set[Any] = set()
+        if self.long_term_memory:
+            past = self.long_term_memory.recall_conflicts(limit=50)
+            for pc in past:
+                if pc.get("slot"):
+                    historically_bad_slots.add(pc["slot"])
+                if pc.get("room_id"):
+                    historically_bad_rooms.add(pc["room_id"])
+
         self._set_state(AgentState.RUNNING)
         react_log: list[dict] = []
-        removed = 0
-        iteration = 0
 
+        if historically_bad_slots or historically_bad_rooms:
+            react_log.append({
+                "phase": "reason",
+                "message": (
+                    f"Loaded {len(historically_bad_slots)} historically bad slots and "
+                    f"{len(historically_bad_rooms)} historically bad rooms from long-term memory."
+                )
+            })
+
+        removed   = 0
+        iteration = 0
         remaining = list(conflicts)
 
         while remaining and iteration < self.MAX_REACT_ITERATIONS:
             iteration += 1
-            still_unresolved = []
 
             for conflict in remaining:
                 entries = conflict.get("entries", [])
                 if len(entries) < 2:
                     continue
 
-                victim = entries[1]  # keep entries[0], try to fix entries[1]
+                victim = entries[1]
 
                 # ── REASON ────────────────────────────────────────────────────
-                reason = (
-                    f"Iter {iteration}: {conflict['type']} at slot {conflict['slot']}. "
-                    f"Trying to relocate entry for division {victim.get('division_id')}."
-                )
-                react_log.append({"phase": "reason", "message": reason})
+                react_log.append({
+                    "phase": "reason",
+                    "message": (
+                        f"Iter {iteration}: {conflict['type']} at slot {conflict['slot']}. "
+                        f"Trying to relocate division {victim.get('division_id')}."
+                    )
+                })
 
                 resolved = False
 
                 if conflict["type"] == "room_conflict" and all_rooms:
-                    # ── ACT: find a free room ─────────────────────────────────
+                    # ── ACT: prefer rooms not in historically bad set ──────────
+                    preferred_rooms = [r for r in all_rooms if r["id"] not in historically_bad_rooms] or all_rooms
                     div = divisions_map.get(victim["division_id"], {})
                     result = self.use_tool(
                         "find_alternative_room",
@@ -121,7 +143,7 @@ class ConflictResolutionAgent(BaseAgent):
                         student_count=div.get("student_count", 0),
                         is_lab=victim.get("is_lab", False),
                         timetable=timetable,
-                        all_rooms=all_rooms,
+                        all_rooms=preferred_rooms,
                     )
                     # ── OBSERVE ───────────────────────────────────────────────
                     if result["found"]:
@@ -134,13 +156,17 @@ class ConflictResolutionAgent(BaseAgent):
                         react_log.append({"phase": "observe", "message": "No alternative room found."})
 
                 if not resolved and all_timeslots:
-                    # ── ACT: find a free timeslot ─────────────────────────────
+                    # ── ACT: prefer slots not in historically bad set ──────────
+                    preferred_slots = [
+                        ts for ts in all_timeslots
+                        if f"{ts['day']}_{ts['slot_number']}" not in historically_bad_slots
+                    ] or all_timeslots
                     result = self.use_tool(
                         "find_alternative_slot",
                         division_id=victim["division_id"],
                         room_id=victim["room_id"],
                         timetable=timetable,
-                        all_timeslots=all_timeslots,
+                        all_timeslots=preferred_slots,
                     )
                     # ── OBSERVE ───────────────────────────────────────────────
                     if result["found"]:
@@ -160,12 +186,8 @@ class ConflictResolutionAgent(BaseAgent):
                         react_log.append({"phase": "observe", "message": "No alternative slot found. Dropping entry."})
                         timetable = [e for e in timetable if e is not victim]
                         removed += 1
-                        resolved = True  # handled by removal
+                        resolved = True
 
-                if not resolved:
-                    still_unresolved.append(conflict)
-
-            # Re-detect after this iteration
             detect_result = await self.detect_conflicts({"timetable": timetable})
             remaining = detect_result.get("conflicts", [])
             react_log.append({"phase": "observe", "message": f"After iter {iteration}: {len(remaining)} conflicts remain."})

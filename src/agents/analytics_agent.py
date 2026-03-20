@@ -42,6 +42,8 @@ class AnalyticsAgent(BaseAgent):
             return await self.generate_report(params)
         elif method == "self_reflect":
             return await self.self_reflect(params)
+        elif method == "detect_anomalies":
+            return await self.detect_anomalies(params)
         return {"status": "error", "message": f"Unknown method: {method}"}
 
     async def analyze_timetable(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -213,12 +215,68 @@ class AnalyticsAgent(BaseAgent):
             "suggestions": suggestions,
         }
 
+    async def detect_anomalies(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Flags unusual patterns in the timetable:
+        - Divisions with 0 classes on a scheduled day
+        - Subjects scheduled far more than their hours_per_week
+        - Rooms used in every single slot (overloaded)
+        """
+        timetable: List[Dict] = data.get("timetable", [])
+        subjects_meta: List[Dict] = data.get("subjects", [])
+        anomalies: List[str] = []
+
+        if not timetable:
+            return {"status": "success", "anomalies": []}
+
+        # Division × day class count
+        div_day: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        all_days: set = set()
+        for e in timetable:
+            div_day[str(e.get("division_id"))][e.get("day", "")] += 1
+            all_days.add(e.get("day", ""))
+
+        for div_id, day_counts in div_day.items():
+            for day in all_days:
+                if day_counts.get(day, 0) == 0:
+                    anomalies.append(
+                        f"Division {div_id} has 0 classes on {day} — possible scheduling gap."
+                    )
+
+        # Subject over-scheduling
+        subject_hours_meta = {s["name"]: s.get("hours_per_week", 0) for s in subjects_meta}
+        subject_scheduled: Dict[str, int] = defaultdict(int)
+        for e in timetable:
+            subject_scheduled[e.get("subject_name", "")] += 1
+
+        for subj, count in subject_scheduled.items():
+            expected = subject_hours_meta.get(subj, 0)
+            if expected and count > expected * len({e["division_id"] for e in timetable if e.get("subject_name") == subj}) * 1.5:
+                anomalies.append(
+                    f"Subject '{subj}' is scheduled {count} times — significantly above expected."
+                )
+
+        # Overloaded rooms
+        room_slot_count: Dict[str, int] = defaultdict(int)
+        total_slots = len(all_days) * max((e.get("slot_number", 0) for e in timetable), default=1)
+        for e in timetable:
+            room_slot_count[str(e.get("room_id"))] += 1
+
+        for room_id, count in room_slot_count.items():
+            if total_slots > 0 and count >= total_slots:
+                anomalies.append(
+                    f"Room {room_id} is used in every available slot — may be a bottleneck."
+                )
+
+        return {"status": "success", "anomalies": anomalies, "anomaly_count": len(anomalies)}
+
     async def generate_report(self, data: Dict[str, Any]) -> Dict[str, Any]:
         timetable = data.get("timetable", [])
-        analytics   = (await self.analyze_timetable({"timetable": timetable})).get("analytics", {})
-        insights    = (await self.generate_insights({"timetable": timetable})).get("insights", [])
-        metrics     = (await self.calculate_metrics({"timetable": timetable})).get("metrics", {})
-        reflection  = (await self.self_reflect({"timetable": timetable}))
+        analytics  = (await self.analyze_timetable({"timetable": timetable})).get("analytics", {})
+        insights   = (await self.generate_insights({"timetable": timetable})).get("insights", [])
+        metrics    = (await self.calculate_metrics({"timetable": timetable})).get("metrics", {})
+        reflection = (await self.self_reflect({"timetable": timetable}))
+        anomalies  = (await self.detect_anomalies(data)).get("anomalies", [])
 
         return {
             "status": "success",
@@ -229,6 +287,7 @@ class AnalyticsAgent(BaseAgent):
                 "quality_score": reflection.get("quality_score"),
                 "critique": reflection.get("critique", []),
                 "improvement_suggestions": reflection.get("suggestions", []),
+                "anomalies": anomalies,
                 "total_entries": len(timetable)
             }
         }

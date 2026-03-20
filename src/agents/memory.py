@@ -76,3 +76,21 @@ class LongTermMemory:
     def recall_conflicts(self, limit: int = 20) -> list[dict]:
         """Retrieve historically problematic room/slot combos."""
         return self.recall("ConflictResolutionAgent", "conflict_pattern", limit)
+
+    def remember_solver_outcome(self, run_id: str, cp_vars: int, solver_mode: str, status: str, solve_time: float) -> None:
+        """Persist solver outcome so PlannerAgent can learn from it."""
+        self.remember("PlannerAgent", "solver_outcome", {
+            "cp_vars": cp_vars, "solver_mode": solver_mode,
+            "status": status, "solve_time": solve_time,
+        }, run_id=run_id)
+
+    def recall_solver_outcomes(self, limit: int = 20) -> list[dict]:
+        return self.recall("PlannerAgent", "solver_outcome", limit)
+
+    def remember_feedback(self, run_id: str, stage: str, approved: bool, notes: str = "") -> None:
+        self.remember("FeedbackAgent", "hitl_decision", {
+            "stage": stage, "approved": approved, "notes": notes,
+        }, run_id=run_id)
+
+    def recall_feedback(self, limit: int = 20) -> list[dict]:
+        return self.recall("FeedbackAgent", "hitl_decision", limit)

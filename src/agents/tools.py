@@ -71,6 +71,23 @@ def find_alternative_room(
     return {"found": False, "room": None}
 
 
+def get_faculty_load_balanced(
+    faculty_list: list[dict],
+    timetable: list[dict],
+    max_load: int = 20,
+) -> dict:
+    """
+    Returns faculty sorted by current load (ascending).
+    Filters out faculty who have reached max_load.
+    """
+    loads = {f["id"]: sum(1 for e in timetable if e.get("faculty_id") == f["id"]) for f in faculty_list}
+    available = sorted(
+        [f for f in faculty_list if loads.get(f["id"], 0) < max_load],
+        key=lambda f: loads.get(f["id"], 0),
+    )
+    return {"available": available, "loads": loads}
+
+
 def score_timetable(timetable: list[dict]) -> dict:
     """
     Quick quality score used by self-reflection.

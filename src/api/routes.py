@@ -245,7 +245,7 @@ def generate_timetable(
         "timeslots": [{"id": t.id, "day": t.day, "slot_number": t.slot_number, "start_time": t.start_time, "end_time": t.end_time} for t in timeslots],
     }
 
-    hitl = request.hitl_enabled if hasattr(request, "hitl_enabled") else False
+    hitl = request.hitl_enabled
     orchestrator = AgentOrchestrator(db_session_factory=SessionLocal)
     result = orchestrator.generate_timetable(input_data, hitl_enabled=hitl)
 
@@ -292,24 +292,45 @@ def get_run_status(run_id: str, db: Session = Depends(get_db), _: User = Depends
     return {"run_id": run_id, "status": run.status, "stage": run.stage, "checkpoint": checkpoint}
 
 @router.post("/timetable/approve/{run_id}")
-def approve_run(run_id: str, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def approve_run(run_id: str, db: Session = Depends(get_db), _: User = Depends(get_current_user),
+               notes: str = ""):
     import asyncio
     orchestrator = AgentOrchestrator(db_session_factory=SessionLocal)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        result = loop.run_until_complete(orchestrator.resume(run_id, approved=True, db_session_factory=SessionLocal))
+        result = loop.run_until_complete(
+            orchestrator.resume(run_id, approved=True, notes=notes, db_session_factory=SessionLocal)
+        )
     finally:
         loop.close()
     return result
 
 @router.post("/timetable/reject/{run_id}")
-def reject_run(run_id: str, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def reject_run(run_id: str, db: Session = Depends(get_db), _: User = Depends(get_current_user),
+              notes: str = ""):
     run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
     if not run:
         raise HTTPException(404, "Run not found")
     run.status = "rejected"
     db.commit()
+    # Record rejection feedback
+    import asyncio
+    from src.agents.feedback_agent import FeedbackAgent
+    from src.agents.memory import LongTermMemory
+    ltm = LongTermMemory(SessionLocal)
+    agent = FeedbackAgent()
+    agent.long_term_memory = ltm
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(agent._initialize_agent())
+        loop.run_until_complete(agent.record_feedback({
+            "run_id": run_id, "stage": run.stage or "",
+            "approved": False, "notes": notes,
+        }))
+    finally:
+        loop.close()
     return {"run_id": run_id, "status": "rejected"}
 
 
@@ -317,15 +338,82 @@ def reject_run(run_id: str, db: Session = Depends(get_db), _: User = Depends(get
 
 @router.post("/chat")
 def chat(request: ChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    msg = request.message.lower().strip()
+    msg     = request.message.lower().strip()
+    history = request.history  # list of {"role": "user"|"assistant", "content": str}
+    context = request.context
 
+    # ── Generate timetable ────────────────────────────────────────────────────
     if any(w in msg for w in ["generate", "create timetable", "make timetable"]):
         depts = db.query(Department).all()
         if not depts:
             return {"reply": "No departments found. Please add data first.", "action": None}
-        result = generate_timetable(TimetableRequest(department_ids=[d.id for d in depts]), db, current_user)
+        result = generate_timetable(
+            TimetableRequest(department_ids=[d.id for d in depts]),
+            db, current_user
+        )
         return {"reply": "Timetable generated successfully!", "action": "timetable_generated", "data": result}
 
+    # ── Explain a timetable entry ─────────────────────────────────────────────
+    if any(w in msg for w in ["explain", "why", "reason"]):
+        timetable_data = context.get("timetable", [])
+        plan_data      = context.get("plan", {})
+        if not timetable_data:
+            # Try to load the latest saved timetable for this user
+            saved = db.query(SavedTimetable).filter(
+                SavedTimetable.created_by == current_user.id
+            ).order_by(SavedTimetable.created_at.desc()).first()
+            if saved:
+                saved_result = json.loads(saved.result_json)
+                timetable_data = saved_result.get("timetable", [])
+                plan_data      = saved_result.get("plan", {})
+
+        if timetable_data:
+            rooms     = [{"id": r.id, "room_number": r.room_number, "capacity": r.capacity, "is_lab": r.is_lab} for r in db.query(Room).all()]
+            faculty   = [{"id": f.id, "name": f.name, "department_id": f.department_id} for f in db.query(Faculty).all()]
+            divisions = [{"id": d.id, "name": d.name, "student_count": d.student_count} for d in db.query(Division).all()]
+
+            from src.agents.explainability_agent import ExplainabilityAgent
+            import asyncio
+            agent = ExplainabilityAgent()
+            loop  = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(agent._initialize_agent())
+                exp_result = loop.run_until_complete(agent.explain_timetable({
+                    "timetable": timetable_data,
+                    "plan": plan_data,
+                    "rooms": rooms,
+                    "faculty": faculty,
+                    "divisions": divisions,
+                }))
+            finally:
+                loop.close()
+
+            explanation = exp_result.get("explanation", [])
+            reply = "Here's why the timetable was generated this way:\n" + "\n".join(f"• {e}" for e in explanation)
+            return {"reply": reply, "action": "explanation", "data": explanation}
+        return {"reply": "No timetable found to explain. Please generate one first.", "action": None}
+
+    # ── Analytics / anomalies ─────────────────────────────────────────────────
+    if any(w in msg for w in ["anomal", "issue", "problem", "quality", "score", "insight"]):
+        saved = db.query(SavedTimetable).filter(
+            SavedTimetable.created_by == current_user.id
+        ).order_by(SavedTimetable.created_at.desc()).first()
+        if saved:
+            saved_result   = json.loads(saved.result_json)
+            report         = saved_result.get("report", {})
+            anomalies      = report.get("anomalies", [])
+            quality_score  = report.get("quality_score", "N/A")
+            insights       = report.get("insights", [])
+            parts = [f"Quality score: {quality_score}/100"]
+            if insights:
+                parts.append("Insights: " + "; ".join(insights))
+            if anomalies:
+                parts.append("Anomalies: " + "; ".join(anomalies))
+            return {"reply": "\n".join(parts), "action": "analytics", "data": report}
+        return {"reply": "No timetable found. Generate one first.", "action": None}
+
+    # ── Data queries ──────────────────────────────────────────────────────────
     if "department" in msg:
         data = [{"id": d.id, "name": d.name, "code": d.code} for d in db.query(Department).all()]
         return {"reply": f"Found {len(data)} department(s).", "action": "show_data", "data": data}
@@ -347,9 +435,70 @@ def chat(request: ChatRequest, db: Session = Depends(get_db), current_user: User
         return {"reply": f"Found {len(data)} division(s).", "action": "show_data", "data": data}
 
     return {
-        "reply": "I can help you generate a timetable or show data. Try: 'generate timetable', 'show departments', 'show rooms', etc.",
+        "reply": (
+            "I can help you with:\n"
+            "• 'generate timetable' — run the full AI pipeline\n"
+            "• 'explain timetable' — understand why slots/rooms were chosen\n"
+            "• 'show anomalies' / 'quality score' — analytics on the last timetable\n"
+            "• 'show departments/subjects/rooms/faculty/divisions' — view data"
+        ),
         "action": "help"
     }
+
+
+# ── Explainability ────────────────────────────────────────────────────────────
+
+@router.post("/timetable/explain")
+def explain_timetable_endpoint(body: dict, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    import asyncio
+    from src.agents.explainability_agent import ExplainabilityAgent
+
+    timetable = body.get("timetable", [])
+    entry     = body.get("entry")
+    plan      = body.get("plan", {})
+    rooms     = [{"id": r.id, "room_number": r.room_number, "capacity": r.capacity, "is_lab": r.is_lab} for r in db.query(Room).all()]
+    faculty   = [{"id": f.id, "name": f.name, "department_id": f.department_id} for f in db.query(Faculty).all()]
+    divisions = [{"id": d.id, "name": d.name, "student_count": d.student_count} for d in db.query(Division).all()]
+
+    agent = ExplainabilityAgent()
+    loop  = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(agent._initialize_agent())
+        if entry:
+            result = loop.run_until_complete(agent.explain_entry({
+                "entry": entry, "timetable": timetable,
+                "rooms": rooms, "faculty": faculty, "divisions": divisions,
+            }))
+        else:
+            result = loop.run_until_complete(agent.explain_timetable({
+                "timetable": timetable, "plan": plan,
+                "rooms": rooms, "faculty": faculty, "divisions": divisions,
+            }))
+    finally:
+        loop.close()
+    return result
+
+
+# ── Feedback ──────────────────────────────────────────────────────────────────
+
+@router.get("/feedback/preferences")
+def get_feedback_preferences(_: User = Depends(get_current_user)):
+    import asyncio
+    from src.agents.feedback_agent import FeedbackAgent
+    from src.agents.memory import LongTermMemory
+
+    ltm   = LongTermMemory(SessionLocal)
+    agent = FeedbackAgent()
+    agent.long_term_memory = ltm
+    loop  = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(agent._initialize_agent())
+        result = loop.run_until_complete(agent.get_preferences({}))
+    finally:
+        loop.close()
+    return result
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
